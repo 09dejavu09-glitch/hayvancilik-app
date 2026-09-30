@@ -1,39 +1,33 @@
 workflows:
-  android-build:
-    name: Hayvancılık App Android
+  android-apk:
+    name: AHIR Android APK
+    max_build_duration: 60
+
     environment:
       flutter: stable
+      groups:
+        - google_play
+      vars:
+        PACKAGE_NAME: "com.example.ahir"
 
     scripts:
-      - name: Android klasörünü oluştur
-        script: flutter create --platforms=android .
-
-      - name: Çalışan main.dart dosyasını Flutter'a bağla
+      - name: Get Flutter packages
         script: |
-          mkdir -p lib
-          cp main.dart lib/main.dart
+          flutter pub get
 
-      - name: AdMob test App ID ekle
+      - name: Check Flutter project
         script: |
-          python3 - <<'PY'
-          from pathlib import Path
+          flutter doctor
+          flutter analyze
 
-          manifest = Path('android/app/src/main/AndroidManifest.xml')
-          text = manifest.read_text()
-          meta = '''        <meta-data
-              android:name="com.google.android.gms.ads.APPLICATION_ID"
-              android:value="ca-app-pub-3940256099942544~3347511713"/>'''
-
-          if 'com.google.android.gms.ads.APPLICATION_ID' not in text:
-              text = text.replace('</application>', meta + '\n    </application>', 1)
-              manifest.write_text(text)
-          PY
-
-      - name: Paketleri yükle
-        script: flutter pub get
-
-      - name: APK oluştur
-        script: flutter build apk --release
+      - name: Build Android APK
+        script: |
+          flutter build apk --release
 
     artifacts:
-      - build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/flutter-apk/app-release.apk
+
+    publishing:
+      email:
+        recipients:
+          - "$CM_BUILD_EMAIL"
