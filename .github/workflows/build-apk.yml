@@ -43,6 +43,11 @@ jobs:
           manifest.write_text(text)
           PY
 
+      - name: Paketleri yükle
+        run: flutter pub get
+
+      - name: APK oluştur
+        run: flutter build apk --release
 
       - name: APK'yı sakla
         uses: actions/upload-artifact@v4
