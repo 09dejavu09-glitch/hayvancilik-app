@@ -1,4 +1,4 @@
-name: Hayvancilik APK
+name: Hayvancılık APK
 
 on:
   workflow_dispatch:
@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Kodu indir
         uses: actions/checkout@v4
 
@@ -22,11 +23,14 @@ jobs:
       - name: Android klasörünü oluştur
         run: flutter create --platforms=android .
 
+      - name: Kendi main.dart dosyamı kullan
+        run: cp main.dart lib/main.dart
+
       - name: Paketleri yükle
         run: flutter pub get
 
       - name: APK oluştur
-        run: flutter build apk --release --enable-experiment=dot-shorthands
+        run: flutter build apk --release
 
       - name: APK'yı sakla
         uses: actions/upload-artifact@v4
