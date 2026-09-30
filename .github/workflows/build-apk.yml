@@ -25,24 +25,6 @@ jobs:
       - name: Kendi main.dart dosyamı kullan
         run: cp main.dart lib/main.dart
 
-      - name: AdMob App ID ekle
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          manifest = Path("android/app/src/main/AndroidManifest.xml")
-          text = manifest.read_text()
-
-          app_id = '''        <meta-data
-              android:name="com.google.android.gms.ads.APPLICATION_ID"
-              android:value="ca-app-pub-3940256099942544~3347511713"/>'''
-
-          if "com.google.android.gms.ads.APPLICATION_ID" not in text:
-              text = text.replace("</application>", app_id + "\n    </application>")
-
-          manifest.write_text(text)
-          PY
-
       - name: Paketleri yükle
         run: flutter pub get
 
