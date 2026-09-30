@@ -7,19 +7,19 @@ workflows:
       flutter: stable
 
     scripts:
-      - name: Flutter paketlerini yukle
+      - name: Flutter paketlerini yükle
         script: |
           flutter pub get
 
-      - name: Android klasorunu olustur
+      - name: Android klasörünü oluştur
         script: |
           flutter create --platforms=android .
 
-      - name: main.dart dosyasini kullan
+      - name: main.dart dosyasını kullan
         script: |
           cp main.dart lib/main.dart
 
-      - name: APK olustur
+      - name: APK oluştur
         script: |
           flutter build apk --release
 
