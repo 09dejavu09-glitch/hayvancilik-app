@@ -1,27 +1,23 @@
 workflows:
-  hayvancilik_android:
-    name: Hayvancilik APK
-    max_build_duration: 60
-
+  android-build:
+    name: AHIR Android
     environment:
       flutter: stable
 
     scripts:
-      - name: Flutter paketlerini yükle
-        script: |
-          flutter pub get
+      - name: Android platform oluştur
+        script: flutter create --platforms=android .
 
-      - name: Android klasörünü oluştur
+      - name: main.dart dosyasını lib içine kopyala
         script: |
-          flutter create --platforms=android .
-
-      - name: main.dart dosyasını kullan
-        script: |
+          mkdir -p lib
           cp main.dart lib/main.dart
 
+      - name: Paketleri yükle
+        script: flutter pub get
+
       - name: APK oluştur
-        script: |
-          flutter build apk --release
+        script: flutter build apk --release
 
     artifacts:
-      - build/app/outputs/flutter-apk/app-release.apk
+      - build/app/outputs/flutter-apk/*.apk
