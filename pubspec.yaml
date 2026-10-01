@@ -1,18 +1,19 @@
 name: ahir
-description: "AHIR - Akıllı Hayvancılık Yönetimi"
+description: "Ağırlık Ve Rasyon Hesaplama Uygulaması"
 publish_to: 'none'
 
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.2.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
-  shared_preferences: ^2.5.3
   cupertino_icons: ^1.0.8
+  shared_preferences: ^2.5.3
+  google_mobile_ads: ^5.2.0
 
 dev_dependencies:
   flutter_test:
@@ -22,3 +23,4 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
