@@ -7,37 +7,37 @@ workflows:
       flutter: stable
       java: 17
     scripts:
-      - name: Bağımlılıkları ve temizliği yap
+      - name: Flutter Temizliği ve Bağımlılıklar
         script: |
           flutter clean
           flutter pub get
 
-      - name: Temiz Android projesi oluştur
-        script: |
-          rm -rf android
-          flutter create --platforms=android .
-
       - name: AdMob App ID Inject
         script: |
           cat << 'EOF' > inject.py
+          import os
+
           path = "android/app/src/main/AndroidManifest.xml"
-          with open(path, "r") as f:
-              content = f.read()
-          admob_tag = '    <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713"/>\n</application>'
-          if "APPLICATION_ID" not in content:
-              content = content.replace("</application>", admob_tag)
-              with open(path, "w") as f:
-                  f.write(content)
+          if os.path.exists(path):
+              with open(path, "r", encoding="utf-8") as f:
+                  content = f.read()
+              
+              admob_tag = '\n        <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713"/>'
+              if "APPLICATION_ID" not in content and "</application>" in content:
+                  content = content.replace("</application>", f"{admob_tag}\n    </application>")
+                  with open(path, "w", encoding="utf-8") as f:
+                      f.write(content)
+                  print("AdMob ID eklendi.")
           EOF
           python3 inject.py
 
-      - name: Gradle izinlerini ayarla
+      - name: Gradle İzinlerini Ayarla
         script: |
-          chmod +x android/gradlew
+          cd android && chmod +x gradlew
 
       - name: APK Derle
         script: |
-          flutter build apk --release --no-tree-shake-icons
+          flutter build apk --release
 
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
