@@ -1,49 +1,37 @@
 workflows:
   android-build:
     name: AHIR Android
-
     environment:
       flutter: stable
 
     scripts:
 
-      - name: Flutter sürümünü kontrol et
+      - name: Temiz Android projesi oluştur
         script: |
-          flutter --version
+          rm -rf android
+          flutter create --platforms=android .
 
-      - name: Android projesini oluştur
-        script: |
-          if [ ! -d "android" ]; then
-            flutter create --platforms=android .
-          fi
-
-      - name: Çalışan main.dart dosyasını Flutter'a bağla
+      - name: Çalışan main.dart dosyasını bağla
         script: |
           mkdir -p lib
           cp main.dart lib/main.dart
 
-      - name: AdMob App ID ekle
+      - name: AHIR ikonlarını yerleştir
         script: |
-          python3 - <<'PY'
-          from pathlib import Path
+          mkdir -p /tmp/ahir_zip
 
-          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          unzip -q hayvancilik-app-main-with-android.zip \
+          'hayvancilik-app-main/android/app/src/main/res/mipmap-*/ic_launcher*.png' \
+          -d /tmp/ahir_zip
 
-          if manifest.exists():
-              text = manifest.read_text()
+          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
+            src="/tmp/ahir_zip/hayvancilik-app-main/android/app/src/main/res/mipmap-$d"
+            dst="android/app/src/main/res/mipmap-$d"
 
-              meta = """        <meta-data
-                  android:name="com.google.android.gms.ads.APPLICATION_ID"
-                  android:value="ca-app-pub-3940256099942544~3347511713"/>"""
-
-              if "com.google.android.gms.ads.APPLICATION_ID" not in text:
-                  text = text.replace(
-                      "</application>",
-                      meta + "\n    </application>",
-                      1
-                  )
-                  manifest.write_text(text)
-          PY
+            if [ -d "$src" ]; then
+              cp "$src"/ic_launcher*.png "$dst"/
+            fi
+          done
 
       - name: Paketleri yükle
         script: |
