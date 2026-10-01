@@ -1,0 +1,55 @@
+workflows:
+  android-build:
+    name: AHIR Android
+
+    environment:
+      flutter: stable
+
+    scripts:
+      - name: Flutter sürümünü kontrol et
+        script: flutter --version
+
+      - name: Android projesini hazırla
+        script: |
+          if [ -d "android" ]; then
+            echo "Mevcut Android klasörü kullanılıyor."
+          elif [ -f "hayvancilik-app-main-with-android.zip" ]; then
+            echo "Android klasörü ZIP'ten getiriliyor."
+            rm -rf /tmp/ahir_project
+            mkdir -p /tmp/ahir_project
+            unzip -q hayvancilik-app-main-with-android.zip 'hayvancilik-app-main/android/*' -d /tmp/ahir_project
+            cp -R /tmp/ahir_project/hayvancilik-app-main/android .
+          else
+            echo "Android klasörü oluşturuluyor."
+            flutter create --platforms=android .
+          fi
+
+      - name: Çalışan main.dart dosyasını bağla
+        script: |
+          mkdir -p lib
+          cp main.dart lib/main.dart
+
+      - name: AdMob test App ID ekle
+        script: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          manifest = Path('android/app/src/main/AndroidManifest.xml')
+          text = manifest.read_text()
+          meta = '''        <meta-data
+              android:name="com.google.android.gms.ads.APPLICATION_ID"
+              android:value="ca-app-pub-3940256099942544~3347511713"/>'''
+
+          if 'com.google.android.gms.ads.APPLICATION_ID' not in text:
+              text = text.replace('</application>', meta + '\n    </application>', 1)
+              manifest.write_text(text)
+          PY
+
+      - name: Paketleri yükle
+        script: flutter pub get
+
+      - name: APK oluştur
+        script: flutter build apk --release
+
+    artifacts:
+      - build/app/outputs/flutter-apk/*.apk
