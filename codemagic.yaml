@@ -1,5 +1,4 @@
 workflows:
-  # Hatanın çözümü için buradaki ismi 'android-build' olarak geri değiştirdik.
   android-build:
     name: Android APK Build
     max_build_duration: 60
@@ -20,9 +19,16 @@ workflows:
 
       - name: AdMob App ID Inject
         script: |
-          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
-          ADMOB_ID="ca-app-pub-3940256099942544~3347511713"
-          sed -i "/<\/application>/i \        <meta-data android:name=\"com.google.android.gms.ads.APPLICATION_ID\" android:value=\"$ADMOB_ID\"/>" $MANIFEST_PATH
+          python3 -c '
+          path = "android/app/src/main/AndroidManifest.xml"
+          with open(path, "r") as f:
+              content = f.read()
+          admob_tag = '\''    <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713"/>\n</application>'\''
+          if "APPLICATION_ID" not in content:
+              content = content.replace("</application>", admob_tag)
+              with open(path, "w") as f:
+                  f.write(content)
+          '
 
       - name: Gradle izinlerini ayarla
         script: |
