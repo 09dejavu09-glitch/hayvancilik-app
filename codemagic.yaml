@@ -8,7 +8,8 @@ workflows:
     scripts:
 
       - name: Flutter sürümünü kontrol et
-        script: flutter --version
+        script: |
+          flutter --version
 
       - name: Android projesini oluştur
         script: |
@@ -16,20 +17,7 @@ workflows:
             flutter create --platforms=android .
           fi
 
-      - name: Gradle sürümünü AdMob ile uyumlu yap
-        script: |
-          if [ -f "android/gradle/wrapper/gradle-wrapper.properties" ]; then
-            sed -i.bak 's#distributionUrl=.*#distributionUrl=https\\://services.gradle.org/distributions/gradle-8.9-all.zip#' android/gradle/wrapper/gradle-wrapper.properties
-          fi
-
-      - name: Android Gradle Plugin sürümünü ayarla
-        script: |
-          if [ -f "android/settings.gradle" ]; then
-            sed -i.bak -E 's/id "com.android.application" version "[^"]+"/id "com.android.application" version "8.7.3"/' android/settings.gradle
-            sed -i.bak -E 's/id "com.android.library" version "[^"]+"/id "com.android.library" version "8.7.3"/' android/settings.gradle
-          fi
-
-      - name: Çalışan main.dart dosyasını bağla
+      - name: Çalışan main.dart dosyasını Flutter'a bağla
         script: |
           mkdir -p lib
           cp main.dart lib/main.dart
@@ -40,26 +28,30 @@ workflows:
           from pathlib import Path
 
           manifest = Path("android/app/src/main/AndroidManifest.xml")
-          text = manifest.read_text()
 
-          meta = """        <meta-data
-              android:name="com.google.android.gms.ads.APPLICATION_ID"
-              android:value="ca-app-pub-3940256099942544~3347511713"/>"""
+          if manifest.exists():
+              text = manifest.read_text()
 
-          if "com.google.android.gms.ads.APPLICATION_ID" not in text:
-              text = text.replace(
-                  "</application>",
-                  meta + "\n    </application>",
-                  1
-              )
-              manifest.write_text(text)
+              meta = """        <meta-data
+                  android:name="com.google.android.gms.ads.APPLICATION_ID"
+                  android:value="ca-app-pub-3940256099942544~3347511713"/>"""
+
+              if "com.google.android.gms.ads.APPLICATION_ID" not in text:
+                  text = text.replace(
+                      "</application>",
+                      meta + "\n    </application>",
+                      1
+                  )
+                  manifest.write_text(text)
           PY
 
       - name: Paketleri yükle
-        script: flutter pub get
+        script: |
+          flutter pub get
 
       - name: APK oluştur
-        script: flutter build apk --release
+        script: |
+          flutter build apk --release
 
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
