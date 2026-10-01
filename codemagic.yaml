@@ -27,6 +27,9 @@ workflows:
               cp "$src"/ic_launcher*.png "$dst"/
             fi
           done
+          
+          - name: Flutter sürümünü kontrol et
+  script: flutter --version
 
       - name: Paketleri yükle
         script: flutter pub get
