@@ -1,38 +1,36 @@
 workflows:
-  android-build:
-    name: AHIR Android
+  android-apk-workflow:
+    name: Android APK Build
+    max_build_duration: 60
+    instance_type: mac_mini_m1
     environment:
       flutter: stable
-
+      java: 17
     scripts:
+      - name: Bağımlılıkları ve temizliği yap
+        script: |
+          flutter clean
+          flutter pub get
+
       - name: Temiz Android projesi oluştur
         script: |
           rm -rf android
           flutter create --platforms=android .
 
-      - name: Çalışan main.dart dosyasını bağla
+      - name: AdMob App ID Inject
         script: |
-          mkdir -p lib
-          cp main.dart lib/main.dart
+          MANIFEST_PATH="android/app/src/main/AndroidManifest.xml"
+          ADMOB_ID="ca-app-pub-3940256099942544~3347511713"
+          sed -i "/<\/application>/i \        <meta-data android:name=\"com.google.android.gms.ads.APPLICATION_ID\" android:value=\"$ADMOB_ID\"/>" $MANIFEST_PATH
 
-      - name: AHIR ikonlarını yerleştir
+      - name: Gradle izinlerini ayarla
         script: |
-          mkdir -p /tmp/ahir_zip
-          unzip -q hayvancilik-app-main-with-android.zip 'hayvancilik-app-main/android/app/src/main/res/mipmap-*/ic_launcher*.png' -d /tmp/ahir_zip
+          chmod +x android/gradlew
 
-          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            src="/tmp/ahir_zip/hayvancilik-app-main/android/app/src/main/res/mipmap-$d"
-            dst="android/app/src/main/res/mipmap-$d"
-            if [ -d "$src" ]; then
-              cp "$src"/ic_launcher*.png "$dst"/
-            fi
-          done
-
-      - name: Paketleri yükle
-        script: flutter pub get
-
-      - name: APK oluştur
-        script: flutter build apk --release
+      - name: APK Derle
+        script: |
+          flutter build apk --release --no-tree-shake-icons
 
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
+      
