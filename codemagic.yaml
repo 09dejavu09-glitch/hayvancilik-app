@@ -19,16 +19,17 @@ workflows:
 
       - name: AdMob App ID Inject
         script: |
-          python3 -c '
+          cat << 'EOF' > inject.py
           path = "android/app/src/main/AndroidManifest.xml"
           with open(path, "r") as f:
               content = f.read()
-          admob_tag = '\''    <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713"/>\n</application>'\''
+          admob_tag = '    <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713"/>\n</application>'
           if "APPLICATION_ID" not in content:
               content = content.replace("</application>", admob_tag)
               with open(path, "w") as f:
                   f.write(content)
-          '
+          EOF
+          python3 inject.py
 
       - name: Gradle izinlerini ayarla
         script: |
