@@ -6,17 +6,6 @@ workflows:
       flutter: stable
 
     scripts:
-
-      - name: Android projesini oluştur
-        script: |
-          rm -rf android
-          flutter create --platforms=android .
-
-      - name: main.dart dosyasını Flutter'a bağla
-        script: |
-          mkdir -p lib
-          cp main.dart lib/main.dart
-
       - name: Paketleri yükle
         script: |
           flutter pub get
