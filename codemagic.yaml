@@ -6,11 +6,16 @@ workflows:
     environment:
       flutter: stable
       java: 17
+    cache:
+      cache_paths: [] # Önbelleği tamamen kapatır, dosya çakışmasını engeller
     scripts:
       - name: Paketleri al ve derle
         script: |
-          flutter clean
+          #!/usr/bin/env bash
+          set -e
           flutter pub get
+          rm -rf android/.gradle
+          rm -rf build
           flutter build apk --release
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
