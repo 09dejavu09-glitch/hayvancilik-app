@@ -1,17 +1,27 @@
 workflows:
-  android-workflow:
-    name: Android Release Build
+  android-release:
+    name: SığırTakip Android APK Derleme
     max_build_duration: 30
     instance_type: mac_mini_m1
     environment:
       flutter: stable
       java: 17
     scripts:
-      - name: Paketleri Hazırla
+      - name: Proje Bağımlılıklarını Yükle
         script: |
           flutter pub get
-      - name: APK Derle
+      - name: Eski Build Kalıntılarını Temizle
+        script: |
+          # Codemagic üzerinde çakışan build önbelleğini temizler
+          flutter clean
+          rm -rf build android/app/build
+      - name: Release APK Derle
         script: |
           flutter build apk --release --no-tree-shake-icons
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
+    publishing:
+      email:
+        recipients:
+          - user@example.com   # Kendi e-postanı buraya yazabilirsin
+        trigger_on_build_failure: true
