@@ -1,6 +1,6 @@
 name: ahir_app
-description: "Ahir Takip Ve Yönetim Uygulaması"
-publish_to: 'none'
+description: "Ahir Uygulaması"
+publish_to: 'none' # Paket yayınlanmayacaksa bu şekilde kalsın
 
 version: 1.0.0+1
 
@@ -10,21 +10,20 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  
-  # UI ve İkonlar
-  cupertino_icons: ^1.0.8
+
+  # Hata veren paket ve yaygın kullanılan bağımlılıklar
+  shared_preferences: ^2.2.2
+  cupertino_icons: ^1.0.6
 
 dev_dependencies:
-  # Hatanın çözüldüğü doğru SDK tanımı:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
 
-  # Görseller ve Varlıklar
-  assets:
-    - assets/
-    - assets/icons/
-    
+  # Görsel veya ikon dosyalarınız varsa buraya ekleyebilirsiniz
+  # assets:
+  #   - assets/images/
+  
