@@ -3,36 +3,18 @@ workflows:
     name: AHIR Android
     environment:
       flutter: stable
-
     scripts:
-      - name: Temiz Android projesi oluştur
+      - name: Android platformunu doğrula
         script: |
-          rm -rf android
           flutter create --platforms=android .
-
-      - name: Çalışan main.dart dosyasını bağla
+      - name: AHIR ikonlarını geri yükle
         script: |
-          mkdir -p lib
-          cp main.dart lib/main.dart
-
-      - name: AHIR ikonlarını yerleştir
-        script: |
-          mkdir -p /tmp/ahir_zip
-          unzip -q hayvancilik-app-main-with-android.zip 'hayvancilik-app-main/android/app/src/main/res/mipmap-*/ic_launcher*.png' -d /tmp/ahir_zip
-
-          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            src="/tmp/ahir_zip/hayvancilik-app-main/android/app/src/main/res/mipmap-$d"
-            dst="android/app/src/main/res/mipmap-$d"
-            if [ -d "$src" ]; then
-              cp "$src"/ic_launcher*.png "$dst"/
-            fi
-          done
-
+          if [ -f AHIR_ikon_paketi.zip ]; then
+            unzip -o AHIR_ikon_paketi.zip -d android/app/src/main/res
+          fi
       - name: Paketleri yükle
         script: flutter pub get
-
       - name: APK oluştur
         script: flutter build apk --release
-
     artifacts:
       - build/app/outputs/flutter-apk/*.apk

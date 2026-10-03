@@ -360,10 +360,7 @@ class _AhirHomeState extends State<AhirHome> {
   }
 
 
-  // Türkiye'de yaygın olarak yetiştirilen / tescilli başlıca çiftlik hayvanı ırkları.
-  // Liste, uygulamadaki tür filtresiyle birlikte kullanılır.
   final List<String> breeds = [
-    // Büyükbaş
     'Simental',
     'Holstein',
     'Montofon',
@@ -376,78 +373,15 @@ class _AhirHomeState extends State<AhirHome> {
     'Yerli Kara',
     'Boz Irk',
     'Güney Anadolu Kırmızısı',
-    'Doğu Anadolu Kırmızısı',
-    'Zavot',
-    // Manda
-    'Anadolu Mandası',
-    // Koyun
     'Akkaraman',
-    'Kangal Akkaraman',
-    'Morkaraman',
-    'Dağlıç',
+    'Merinos',
     'İvesi',
-    'Karagül',
-    'Norduz',
-    'Çine Çaparı',
-    'Hemşin',
-    'Tuj',
     'Kıvırcık',
     'Karayaka',
     'Sakız',
-    'Gökçeada',
-    'Merinos',
-    'Pırlak',
-    'Ramlıç',
-    'Anadolu Merinosu',
-    'Orta Anadolu Merinosu',
-    'Karacabey Merinosu',
-    'Malya',
-    'Acıpayam',
-    'Sönmez',
-    'Türkgeldi',
-    'Tahirova',
-    'Menemen',
-    'Karya',
-    'Bafra',
-    'Güney Karaman',
-    // Keçi
+    'Romanov',
     'Ankara Keçisi',
-    'Kıl Keçisi',
-    'Norduz Keçisi',
-    'Kilis Keçisi',
-    'Honamlı Keçisi',
-    'Saanen',
-    'Toggenburg',
   ];
-
-  List<String> _breedsForSpecies(String species) {
-    switch (species) {
-      case 'Büyükbaş':
-        return [
-          'Simental', 'Holstein', 'Montofon', 'Jersey', 'Angus', 'Hereford',
-          'Limuzin', 'Şarole', 'Belçika Mavisi', 'Yerli Kara', 'Boz Irk',
-          'Güney Anadolu Kırmızısı', 'Doğu Anadolu Kırmızısı', 'Zavot',
-        ];
-      case 'Manda':
-        return ['Anadolu Mandası'];
-      case 'Koyun':
-        return [
-          'Akkaraman', 'Kangal Akkaraman', 'Morkaraman', 'Dağlıç', 'İvesi',
-          'Karagül', 'Norduz', 'Çine Çaparı', 'Hemşin', 'Tuj', 'Kıvırcık',
-          'Karayaka', 'Sakız', 'Gökçeada', 'Merinos', 'Pırlak', 'Ramlıç',
-          'Anadolu Merinosu', 'Orta Anadolu Merinosu', 'Karacabey Merinosu',
-          'Malya', 'Acıpayam', 'Sönmez', 'Türkgeldi', 'Tahirova', 'Menemen',
-          'Karya', 'Bafra', 'Güney Karaman',
-        ];
-      case 'Keçi':
-        return [
-          'Ankara Keçisi', 'Kıl Keçisi', 'Norduz Keçisi', 'Kilis Keçisi',
-          'Honamlı Keçisi', 'Saanen', 'Toggenburg',
-        ];
-      default:
-        return breeds;
-    }
-  }
 
   final titles = [
     'AHIR AI',
@@ -814,13 +748,7 @@ class _AhirHomeState extends State<AhirHome> {
                               _addMilkRecord(initialAnimal: a.tag);
                             }
                             if (v == 'delete') {
-                              final tag = a.tag;
-                              setState(() {
-                                animals.removeAt(i);
-                                healthRecords.removeWhere((x) => x.animalTag == tag);
-                                milkRecords.removeWhere((x) => x.animalTag == tag);
-                                reminders.removeWhere((x) => x.animalTag == tag);
-                              });
+                              setState(() => animals.removeAt(i));
                               _saveData();
                             }
                           },
@@ -904,7 +832,6 @@ class _AhirHomeState extends State<AhirHome> {
                   decoration: const InputDecoration(labelText: 'Tür'),
                   items: const [
                     'Büyükbaş',
-                    'Manda',
                     'Koyun',
                     'Keçi',
                   ]
@@ -915,22 +842,12 @@ class _AhirHomeState extends State<AhirHome> {
                         ),
                       )
                       .toList(),
-                  onChanged: (v) {
-                    if (v == null) return;
-                    setD(() {
-                      species = v;
-                      final list = _breedsForSpecies(species);
-                      breed = list.first;
-                    });
-                  },
+                  onChanged: (v) => setD(() => species = v!),
                 ),
                 DropdownButtonFormField<String>(
                   value: breed,
-                  decoration: const InputDecoration(
-                    labelText: 'Irk',
-                    helperText: 'Seçtiğin türe göre ırklar otomatik filtrelenir.',
-                  ),
-                  items: _breedsForSpecies(species)
+                  decoration: const InputDecoration(labelText: 'Irk'),
+                  items: breeds
                       .map(
                         (x) => DropdownMenuItem(
                           value: x,
@@ -1083,7 +1000,6 @@ class _AhirHomeState extends State<AhirHome> {
   CharacterType _characterFor(String species) {
     if (species == 'Koyun') return CharacterType.sheep;
     if (species == 'Keçi') return CharacterType.goat;
-    // Manda için ayrı çizim bulunmadığından büyükbaş karakteri kullanılır.
     return CharacterType.cow;
   }
 
@@ -1093,61 +1009,51 @@ class _AhirHomeState extends State<AhirHome> {
 
   Widget _breeds() {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 30),
+      padding: const EdgeInsets.all(14),
       children: [
         const Text(
-          'Türkiye Hayvan Irkları',
+          'Irk Kataloğu',
           style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         const Text(
-          'Irka dokun. Verim yönü, öne çıkan özelliği, bakım yaklaşımı ve '
-          'Türkiye’deki kullanım alanı hakkında kısa ve pratik bilgi al.',
+          'Bir ırka dokunarak kısa bilgi kartını açabilirsin.',
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         _breedGroup(
           'Büyükbaş',
           CharacterType.cow,
-          _breedsForSpecies('Büyükbaş'),
-        ),
-        _breedGroup(
-          'Manda',
-          CharacterType.cow,
-          _breedsForSpecies('Manda'),
+          [
+            'Simental',
+            'Holstein',
+            'Montofon',
+            'Jersey',
+            'Angus',
+            'Hereford',
+            'Limuzin',
+            'Şarole',
+            'Belçika Mavisi',
+            'Yerli Kara',
+            'Boz Irk',
+          ],
         ),
         _breedGroup(
           'Koyun',
           CharacterType.sheep,
-          _breedsForSpecies('Koyun'),
+          [
+            'Akkaraman',
+            'Merinos',
+            'İvesi',
+            'Kıvırcık',
+            'Karayaka',
+            'Sakız',
+            'Romanov',
+          ],
         ),
         _breedGroup(
           'Keçi',
           CharacterType.goat,
-          _breedsForSpecies('Keçi'),
-        ),
-        const SizedBox(height: 8),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.info_outline, size: 22),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Not: Irk bilgileri yetiştirme kararının tek başına yerine geçmez. '
-                    'İşletmenin iklimi, kaba yem kaynağı, bakım seviyesi ve hedeflenen '
-                    'verim birlikte değerlendirilmelidir.',
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
-                      height: 1.35,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          ['Ankara Keçisi'],
         ),
       ],
     );
@@ -1159,9 +1065,7 @@ class _AhirHomeState extends State<AhirHome> {
     List<String> names,
   ) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
       child: ExpansionTile(
-        initiallyExpanded: title == 'Büyükbaş',
         leading: FarmCharacter(type: type, size: 52),
         title: Text(
           title,
@@ -1173,11 +1077,6 @@ class _AhirHomeState extends State<AhirHome> {
               (b) => ListTile(
                 leading: const Icon(Icons.pets),
                 title: Text(b),
-                subtitle: Text(
-                  _breedInfo[b]?['short'] ?? 'Kısa ırk bilgisi için dokun.',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _breedDetail(b),
               ),
@@ -1187,432 +1086,46 @@ class _AhirHomeState extends State<AhirHome> {
     );
   }
 
-  final Map<String, Map<String, String>> _breedInfo = {
-    'Simental': {
-      'short': 'Et ve süt yönünü birlikte taşıyan güçlü kombine sığır.',
-      'verim': 'Et + süt',
-      'uyum': 'Farklı işletme koşullarına uyum sağlayabilen kombine yapı.',
-      'bakim': 'Kaba yem kalitesi, enerji-protein dengesi ve ayak sağlığı izlenmeli.',
-      'not': 'Çift amaçlı işletmelerde tercih edilir; yüksek performans için düzenli besleme gerekir.',
-    },
-    'Holstein': {
-      'short': 'Süt verimi yönü belirgin, yaygın kullanılan kültür ırkı.',
-      'verim': 'Süt',
-      'uyum': 'İyi bakım ve düzenli besleme ister.',
-      'bakim': 'Enerji dengesi, meme sağlığı, ayak-tırnak ve sıcaklık stresi yakından takip edilmeli.',
-      'not': 'Süt işletmelerinde genetik kapasitenin karşılanması için yem yönetimi önemlidir.',
-    },
-    'Montofon': {
-      'short': 'Kombine verimli, sağlam yapılı Brown Swiss tipi sığır.',
-      'verim': 'Süt + et',
-      'uyum': 'Dağlık ve değişken koşullara uyumu birçok sütçü ırka göre güçlüdür.',
-      'bakim': 'Kaba yem değerlendirme ve dengeli rasyon öne çıkar.',
-      'not': 'Süt ile et arasında denge arayan işletmeler için uygun bir seçenek olabilir.',
-    },
-    'Jersey': {
-      'short': 'Küçük cüsseli, süt yağ oranı ile öne çıkan sütçü sığır.',
-      'verim': 'Süt',
-      'uyum': 'Cüssesi küçük olduğu için yem tüketimi de büyük ırklara göre daha düşüktür.',
-      'bakim': 'Enerji açığı, mineral dengesi ve sürüde uygun yemleme dikkat ister.',
-      'not': 'Süt yağına dayalı üretim yapan işletmelerde değerli olabilir.',
-    },
-    'Angus': {
-      'short': 'Boynuzsuz yapısı ve etçilik yönüyle tanınan sığır.',
-      'verim': 'Et',
-      'uyum': 'Et üretimine yönelik sistemlerde değerlendirilir.',
-      'bakim': 'Büyüme dönemi enerji-protein dengesi ve kondisyon takibi önemlidir.',
-      'not': 'Süt veriminden çok karkas ve etçilik hedefi bulunan işletmelerde düşünülür.',
-    },
-    'Hereford': {
-      'short': 'Dayanıklı karakteri ve etçilik yönüyle bilinen sığır.',
-      'verim': 'Et',
-      'uyum': 'Mera temelli ve etçi sistemlere uyarlanabilir.',
-      'bakim': 'Mera kalitesi, büyüme takibi ve parazit kontrolü önemlidir.',
-      'not': 'Etçi sürülerde mera kullanımından yararlanmak isteyen yetiştiricilerce değerlendirilir.',
-    },
-    'Limuzin': {
-      'short': 'Kas gelişimi ve karkas randımanı yönüyle öne çıkan etçi sığır.',
-      'verim': 'Et',
-      'uyum': 'Et üretim sistemlerinde farklı iklimlere adapte edilebilir.',
-      'bakim': 'Büyüme döneminde kaliteli kaba yem ve uygun enerji seviyesi gerekir.',
-      'not': 'Damızlık seçiminde doğum kolaylığı ile büyüme performansı birlikte değerlendirilmelidir.',
-    },
-    'Şarole': {
-      'short': 'Büyük cüsseli, hızlı canlı ağırlık artışı hedeflenen etçi sığır.',
-      'verim': 'Et',
-      'uyum': 'Yoğun besleme sistemlerinde performans gösterebilir.',
-      'bakim': 'Yüksek büyüme hedefinde yem kalitesi ve mineral denge önemlidir.',
-      'not': 'Karkas ağırlığı hedeflenen işletmelerde kullanılır; doğum güçlüğü riski damızlık seçiminde dikkate alınmalıdır.',
-    },
-    'Belçika Mavisi': {
-      'short': 'Belirgin kas yapısıyla tanınan ileri düzey etçi sığır.',
-      'verim': 'Et',
-      'uyum': 'Yetiştirme amacı ve damızlık seçimi özel planlama gerektirir.',
-      'bakim': 'Doğum özellikleri, anaç yapısı ve sürü yönetimi dikkatle takip edilmelidir.',
-      'not': 'Etçilik özelliği güçlüdür; işletme şartları ve doğum yönetimi önceden planlanmalıdır.',
-    },
-    'Yerli Kara': {
-      'short': 'Türkiye’nin yerli sığır kaynaklarından; dayanıklılığı ile bilinir.',
-      'verim': 'Et + süt',
-      'uyum': 'Özellikle daha sınırlı bakım ve yem koşullarında dayanıklılık gösterebilir.',
-      'bakim': 'Bölgenin kaba yem ve mera kaynaklarıyla ekonomik yetiştirme planlanabilir.',
-      'not': 'Yerli genetik kaynakların korunması açısından da önem taşır.',
-    },
-    'Boz Irk': {
-      'short': 'Türkiye’nin yerli sığır genetik kaynaklarından biridir.',
-      'verim': 'Et + süt',
-      'uyum': 'Mera ve çevre şartlarına uyum kabiliyetiyle bilinir.',
-      'bakim': 'Bölgeye uygun mera yönetimi ve kışlık kaba yem hazırlığı önemlidir.',
-      'not': 'Yerli genetik kaynakların sürdürülmesinde değerlidir.',
-    },
-    'Güney Anadolu Kırmızısı': {
-      'short': 'Sıcak ve kurak Güney Anadolu şartlarına uyumuyla bilinen yerli sığır.',
-      'verim': 'Et + süt',
-      'uyum': 'Sıcak iklim, sınırlı yem ve zorlu çevre şartlarına dayanıklılığı öne çıkar.',
-      'bakim': 'Sıcaklık stresine karşı gölgelik, su ve uygun mera yönetimi sağlanmalı.',
-      'not': 'Zor çevre koşullarında dayanıklılık, verim kadar önemli olduğunda öne çıkar.',
-    },
-    'Doğu Anadolu Kırmızısı': {
-      'short': 'Doğu Anadolu’nun çevre koşullarına uyum sağlamış yerli sığır.',
-      'verim': 'Et + süt',
-      'uyum': 'Soğuk ve yüksek rakımlı koşullara uyum kabiliyetiyle değerlidir.',
-      'bakim': 'Kış döneminde yeterli enerji içeren kaba yem ve barınak koruması önemlidir.',
-      'not': 'Bölgesel genetik kaynakların korunması açısından önem taşır.',
-    },
-    'Zavot': {
-      'short': 'Türkiye’de tescilli yerli sığır ırklarından biridir.',
-      'verim': 'Et + süt',
-      'uyum': 'Özellikle Doğu Anadolu şartlarıyla ilişkilendirilen yerli genetik kaynaktır.',
-      'bakim': 'Kış beslemesi, mera kullanımı ve kondisyon takibi birlikte yürütülmeli.',
-      'not': 'Yerli genetik çeşitliliğin korunmasına katkı sağlayan ırklardandır.',
-    },
-    'Anadolu Mandası': {
-      'short': 'Türkiye’de yetiştirilen manda tipidir; sütü ve çevreye dayanıklılığıyla bilinir.',
-      'verim': 'Süt + et',
-      'uyum': 'Sıcak dönemde suya girme/serinleme imkânı bulunan sistemlerde rahat eder.',
-      'bakim': 'Temiz su, serinleme imkânı, kaliteli kaba yem ve mineral desteği önemlidir.',
-      'not': 'Manda sütü yüksek kuru madde ve yağ içeriği nedeniyle yoğurt ve benzeri ürünlerde değerlidir.',
-    },
-    'Akkaraman': {
-      'short': 'Türkiye’nin yaygın, dayanıklı ve yağlı kuyruklu koyun ırklarındandır.',
-      'verim': 'Et + süt',
-      'uyum': 'Kuraklık ve mera koşullarındaki değişimlere dayanıklıdır.',
-      'bakim': 'Mera yönetimi, kışlık kaba yem ve kondisyon takibi temel konulardır.',
-      'not': 'İç Anadolu başta olmak üzere geniş bir yetiştirme alanına sahiptir.',
-    },
-    'Kangal Akkaraman': {
-      'short': 'Akkaraman grubunun güçlü yapılı, bölgesel olarak öne çıkan tipidir.',
-      'verim': 'Et + süt',
-      'uyum': 'Kurak ve karasal koşullarda yetiştiriciliğe uygundur.',
-      'bakim': 'Kışın enerji ihtiyacı, gebelik dönemi beslemesi ve mera yönetimi önemlidir.',
-      'not': 'Damızlık seçiminde döl verimi, yaşama gücü ve kuzu büyümesi birlikte izlenmelidir.',
-    },
-    'Morkaraman': {
-      'short': 'Doğu Anadolu’da yaygın, yağlı kuyruklu yerli koyun.',
-      'verim': 'Et + süt',
-      'uyum': 'Soğuk, yüksek rakım ve sınırlı mera koşullarına uyumludur.',
-      'bakim': 'Kışın kaliteli kaba yem ve doğum öncesi enerji desteği önemlidir.',
-      'not': 'Doğu Anadolu’nun koyunculuk sistemlerinde önemli bir genetik kaynaktır.',
-    },
-    'Dağlıç': {
-      'short': 'Dayanıklı, yağlı kuyruklu yerli koyun tiplerinden.',
-      'verim': 'Et',
-      'uyum': 'Mera ağırlıklı yetiştirme sistemlerine uygundur.',
-      'bakim': 'Mera kapasitesine göre sürü yoğunluğu ayarlanmalı ve kış yemi hazırlanmalıdır.',
-      'not': 'Etçilik ve yaşama gücü yönleriyle değerlendirilebilir.',
-    },
-    'İvesi': {
-      'short': 'Süt yönü belirgin, sıcak ve kurak bölgelere uyumlu koyun.',
-      'verim': 'Süt',
-      'uyum': 'Sıcak iklim ve mera şartlarında değerlidir.',
-      'bakim': 'Sağım dönemi enerji-protein dengesi ve temiz su özellikle önemlidir.',
-      'not': 'Süt verimi hedefleyen küçükbaş işletmelerde öne çıkan yerli ırklardandır.',
-    },
-    'Karagül': {
-      'short': 'Yağlı kuyruklu yerli koyun gruplarından.',
-      'verim': 'Et + yapağı',
-      'uyum': 'Karasal koşullara uyumlu yerli genetik kaynaklar arasında yer alır.',
-      'bakim': 'Kış barınağı, kaba yem ve sürü kondisyonu düzenli izlenmelidir.',
-      'not': 'Bölgesel üretim sistemine göre et ve yapağı yönleri birlikte değerlendirilebilir.',
-    },
-    'Norduz': {
-      'short': 'Van çevresinde bilinen, dayanıklı yerli koyun genetik kaynağı.',
-      'verim': 'Et + süt',
-      'uyum': 'Dağlık ve karasal çevre şartlarına uyum gösterebilir.',
-      'bakim': 'Mera yönetimi ve kışlık yem hazırlığı temel ihtiyaçlardır.',
-      'not': 'Yerel genetik çeşitlilik açısından önemlidir.',
-    },
-    'Çine Çaparı': {
-      'short': 'Batı Anadolu ile ilişkilendirilen yerli koyun ırklarındandır.',
-      'verim': 'Et + süt',
-      'uyum': 'Ilıman bölge ve mera sistemlerinde değerlendirilebilir.',
-      'bakim': 'Kaba yem kalitesi ve kuzulama döneminde enerji desteği önemlidir.',
-      'not': 'Bölgesel yetiştirme koşullarına göre performansı değişebilir.',
-    },
-    'Hemşin': {
-      'short': 'Doğu Karadeniz’in yağlı kuyruklu yerli koyunlarından.',
-      'verim': 'Et + süt',
-      'uyum': 'Serin, nemli ve engebeli çevreye uyumlu yerli kaynaklardan.',
-      'bakim': 'Islak zemin, ayak sağlığı ve parazit kontrolü özellikle önemlidir.',
-      'not': 'Karadeniz’in yerel koyunculuk sistemleri için değerlidir.',
-    },
-    'Tuj': {
-      'short': 'Doğu Anadolu’da yetiştirilen yağlı kuyruklu yerli koyun.',
-      'verim': 'Et + süt',
-      'uyum': 'Soğuk ve yüksek rakımlı şartlara uyumuyla bilinir.',
-      'bakim': 'Kış beslemesi ve doğum döneminde barınak koruması önemlidir.',
-      'not': 'Kars-Ardahan çevresindeki yerel koyunculuk açısından dikkat çekici bir genetik kaynaktır.',
-    },
-    'Kıvırcık': {
-      'short': 'Trakya ve Marmara ile özdeşleşen, et kalitesiyle bilinen koyun.',
-      'verim': 'Et + yapağı',
-      'uyum': 'Ilıman mera koşullarında başarılıdır.',
-      'bakim': 'Mera kalitesi, parazit kontrolü ve kuzulama yönetimi önemlidir.',
-      'not': 'Kuzu eti kalitesi nedeniyle ekonomik değeri yüksektir.',
-    },
-    'Karayaka': {
-      'short': 'Karadeniz’de yaygın, ince-uzun kuyruklu yerli koyun.',
-      'verim': 'Et + yapağı',
-      'uyum': 'Nemli ve engebeli Karadeniz şartlarına uyum sağlar.',
-      'bakim': 'Ayak sağlığı, parazit mücadelesi ve kaliteli kaba yem önemlidir.',
-      'not': 'Bölgesel mera sistemlerinde yaygın olarak değerlendirilir.',
-    },
-    'Sakız': {
-      'short': 'Süt ve döl verimi yönü güçlü Ege kökenli koyun.',
-      'verim': 'Süt + döl',
-      'uyum': 'Ilıman Ege koşullarında avantajlıdır.',
-      'bakim': 'Yüksek döl verimi nedeniyle gebelik ve doğum dönemi yönetimi dikkat ister.',
-      'not': 'Süt ve kuzu sayısını birlikte artırmak isteyen işletmelerde kullanılabilir.',
-    },
-    'Gökçeada': {
-      'short': 'Ada şartlarında şekillenmiş, dayanıklı yerli koyun.',
-      'verim': 'Et + süt',
-      'uyum': 'Mera ağırlıklı, daha düşük girdili sistemlere uyumludur.',
-      'bakim': 'Mera takibi ve dönemsel parazit kontrolü önemlidir.',
-      'not': 'Ada ve kıyı koşullarına uyumlu genetik kaynakların korunmasında değerlidir.',
-    },
-    'Merinos': {
-      'short': 'Yapağı yönü güçlü, farklı tipleri Türkiye’de yetiştirilen koyun grubu.',
-      'verim': 'Et + yapağı',
-      'uyum': 'İyi bakım ve besleme ile verim potansiyeli yükselir.',
-      'bakim': 'Yapağı kalitesi, besleme ve kırkım yönetimi önemlidir.',
-      'not': 'Türkiye’de farklı Merinos tipleri geliştirilmiş ve yetiştirilmiştir.',
-    },
-    'Pırlak': {
-      'short': 'Batı Anadolu’da yetiştirilen ince-uzun kuyruklu yerli koyun.',
-      'verim': 'Et + süt',
-      'uyum': 'Mera ve ılıman iklim koşullarında değerlendirilebilir.',
-      'bakim': 'Kaba yem ve kuzu büyüme takibi önemlidir.',
-      'not': 'Bölgesel yetiştiricilikte yerel adaptasyon avantajı sağlayabilir.',
-    },
-    'Ramlıç': {
-      'short': 'Et-yapağı yönlü geliştirilmiş koyun tiplerinden.',
-      'verim': 'Et + yapağı',
-      'uyum': 'İç Anadolu’nun karasal şartlarına uygun yetiştirme sistemlerinde değerlendirilir.',
-      'bakim': 'Büyüme dönemi beslemesi ve yapağı yönetimi birlikte planlanmalı.',
-      'not': 'Et ve yapağıyı aynı sürüde değerlendirmek isteyen işletmeler için kullanışlıdır.',
-    },
-    'Anadolu Merinosu': {
-      'short': 'Merinos genetiğinin Anadolu şartlarına uyarlanmış tiplerinden.',
-      'verim': 'Et + yapağı',
-      'uyum': 'İç Anadolu’nun karasal iklimine uyum amacıyla geliştirilmiştir.',
-      'bakim': 'Kışlık kaba yem, kondisyon ve yapağı yönetimi önemlidir.',
-      'not': 'Et ve yapağıyı birlikte hedefleyen işletmelerde kullanılabilir.',
-    },
-    'Orta Anadolu Merinosu': {
-      'short': 'Merinos ve Akkaraman genetiklerinin Anadolu koşullarına uyarlanmış kombinasyonu.',
-      'verim': 'Et + yapağı',
-      'uyum': 'Orta Anadolu’nun karasal çevresine uyum hedefiyle geliştirilmiştir.',
-      'bakim': 'Kış beslemesi ve kuzulama dönemi enerji ihtiyacı iyi planlanmalı.',
-      'not': 'Et-yapağı yönünü bir arada değerlendiren üretim sistemlerine uygundur.',
-    },
-    'Karacabey Merinosu': {
-      'short': 'Türkiye’de geliştirilmiş Merinos tiplerinden biri.',
-      'verim': 'Et + yapağı',
-      'uyum': 'Bölgesine göre mera ve yarı entansif sistemlerde yetiştirilebilir.',
-      'bakim': 'Kuzu büyümesi, yapağı ve damızlık kondisyonu birlikte izlenmeli.',
-      'not': 'Et-yapağı dengesi nedeniyle farklı işletme modellerinde kullanılabilir.',
-    },
-    'Malya': {
-      'short': 'Türkiye’de geliştirilmiş, et-yapağı yönlü koyun tiplerinden.',
-      'verim': 'Et + yapağı',
-      'uyum': 'Karasal ve mera ağırlıklı şartlarda değerlendirilir.',
-      'bakim': 'Kışlık yem planı ve sürü kondisyonu önemlidir.',
-      'not': 'Yerli genetik ile verim yönünün birleştirildiği tipler arasında yer alır.',
-    },
-    'Acıpayam': {
-      'short': 'Türkiye’de tescillenmiş, verim özellikleri geliştirilmiş koyun tipi.',
-      'verim': 'Et + süt',
-      'uyum': 'Bölgesel şartlara göre yarı entansif sistemlerde kullanılabilir.',
-      'bakim': 'Kuzulama ve süt döneminde dengeli rasyon önemlidir.',
-      'not': 'Damızlık seçiminde döl, büyüme ve anaç performansı birlikte izlenmelidir.',
-    },
-    'Sönmez': {
-      'short': 'Türkiye’de geliştirilmiş, döl ve süt yönü dikkate alınan koyun tipi.',
-      'verim': 'Süt + döl',
-      'uyum': 'Ilıman ve yarı entansif işletmelerde değerlendirilebilir.',
-      'bakim': 'Çoklu doğumlarda anaç beslemesi ve kuzu bakımına dikkat edilmeli.',
-      'not': 'Kuzu sayısını ve sütü birlikte hedefleyen işletmeler için kullanılabilir.',
-    },
-    'Türkgeldi': {
-      'short': 'Türkiye’de geliştirilmiş koyun tiplerinden; et ve döl özellikleri birlikte ele alınır.',
-      'verim': 'Et + döl',
-      'uyum': 'Uygun mera ve yarı entansif sistemlerde yetiştirilebilir.',
-      'bakim': 'Kuzu büyümesi ve anaç kondisyonu izlenmelidir.',
-      'not': 'Bölgesel üretim hedeflerine göre damızlık seçiminde değerlendirilebilir.',
-    },
-    'Tahirova': {
-      'short': 'Süt ve döl yönü belirgin, geliştirilmiş koyun tiplerinden.',
-      'verim': 'Süt + döl',
-      'uyum': 'Ilıman ve kaliteli yem kaynağı bulunan işletmelerde avantajlıdır.',
-      'bakim': 'Süt döneminde enerji, protein ve mineral dengesi önemlidir.',
-      'not': 'Yüksek yavru ve süt hedefinde işletme yönetiminin kalitesi belirleyicidir.',
-    },
-    'Menemen': {
-      'short': 'Türkiye’de geliştirilmiş et-yapağı yönlü koyun tiplerinden.',
-      'verim': 'Et + yapağı',
-      'uyum': 'Bölgesel mera ve yarı entansif sistemlere uyarlanabilir.',
-      'bakim': 'Kuzu büyümesi, kondisyon ve yapağı yönetimi birlikte yürütülmeli.',
-      'not': 'Çift yönlü üretim hedefleyen işletmelerde değerlendirilebilir.',
-    },
-    'Karya': {
-      'short': 'Batı Anadolu koşullarına yönelik geliştirilmiş koyun tiplerinden.',
-      'verim': 'Et + süt',
-      'uyum': 'Ege’nin ılıman koşullarında ve yarı entansif sistemlerde değerlendirilebilir.',
-      'bakim': 'Kuzulama dönemi beslemesi ve süt verimi takibi önemlidir.',
-      'not': 'Bölgesel genetiklerin verim yönleriyle değerlendirilmesine örnektir.',
-    },
-    'Bafra': {
-      'short': 'Türkiye’de geliştirilmiş, döl ve süt yönüyle değerlendirilen koyun tipi.',
-      'verim': 'Süt + döl',
-      'uyum': 'Ilıman koşullarda iyi yem yönetimiyle değerlendirilebilir.',
-      'bakim': 'Çoklu doğumlarda kuzuya erken ve yeterli ağız sütü verilmesi kritik.',
-      'not': 'Yavru sayısını artırmayı hedefleyen işletmelerde yönetim kalitesi önemlidir.',
-    },
-    'Güney Karaman': {
-      'short': 'Güney ve İç Anadolu şartlarına uyumlu yerli koyun tiplerinden.',
-      'verim': 'Et + süt',
-      'uyum': 'Kurak ve sıcak dönemlere dayanıklılığıyla değerlidir.',
-      'bakim': 'Su, gölgelik ve mera kapasitesine göre sürü yönetimi önemlidir.',
-      'not': 'Zorlu çevre koşullarında yerel adaptasyon avantajı sağlar.',
-    },
-    'Ankara Keçisi': {
-      'short': 'Tiftik üretimiyle özdeşleşmiş Türkiye’nin yerli keçi ırkı.',
-      'verim': 'Tiftik',
-      'uyum': 'Kurak ve yarı kurak İç Anadolu koşullarına iyi uyum sağlar.',
-      'bakim': 'Tiftik kalitesi için besleme, kırkım zamanı ve parazit kontrolü önemlidir.',
-      'not': 'Lif kalitesi hedeflendiği için et verimi tek başına seçim ölçütü değildir.',
-    },
-    'Kıl Keçisi': {
-      'short': 'Türkiye’nin en yaygın yerli keçi kaynaklarından; dayanıklıdır.',
-      'verim': 'Et + süt',
-      'uyum': 'Maki, fundalık ve dağlık mera şartlarını değerlendirebilir.',
-      'bakim': 'Mera yönetimi, ayak sağlığı ve parazit mücadelesi önemlidir.',
-      'not': 'Düşük girdiyle yetiştiricilik yapılan bölgelerde önemli bir üretim kaynağıdır.',
-    },
-    'Norduz Keçisi': {
-      'short': 'Doğu Anadolu’da yetiştirilen yerli keçi genetik kaynağı.',
-      'verim': 'Et + süt',
-      'uyum': 'Dağlık ve karasal çevre şartlarına uyumludur.',
-      'bakim': 'Kışlık kaba yem ve gebelik döneminde yeterli enerji önemlidir.',
-      'not': 'Yerel genetik çeşitliliğin korunması açısından değerlidir.',
-    },
-    'Kilis Keçisi': {
-      'short': 'Güneydoğu ile ilişkilendirilen, süt yönü de bulunan yerli keçi.',
-      'verim': 'Süt + et',
-      'uyum': 'Sıcak ve kurak bölge şartlarına adapte olabilir.',
-      'bakim': 'Sıcaklıkta temiz su, gölgelik ve kaliteli kaba yem önemlidir.',
-      'not': 'Sütçülük yönü nedeniyle aile ve küçük işletmelerde değerlendirilebilir.',
-    },
-    'Honamlı Keçisi': {
-      'short': 'Türkiye’de tescilli, iri yapılı ve et yönü belirgin keçi.',
-      'verim': 'Et + süt',
-      'uyum': 'Akdeniz ve çevresindeki mera sistemlerinde değerlendirilebilir.',
-      'bakim': 'Oğlak büyümesi, mineral destek ve parazit kontrolü önemlidir.',
-      'not': 'İri cüsse nedeniyle yem planı ve damızlık kondisyonu dikkatle izlenmelidir.',
-    },
-    'Saanen': {
-      'short': 'Yüksek süt potansiyeliyle tanınan kültür keçisi.',
-      'verim': 'Süt',
-      'uyum': 'İyi bakım, kaliteli yem ve barınak yönetimi bulunan işletmelerde daha uygundur.',
-      'bakim': 'Sıcaklık stresi, meme sağlığı ve enerji dengesi yakından takip edilmeli.',
-      'not': 'Yüksek verim hedefinde yerli ırklara göre işletme girdileri artabilir.',
-    },
-    'Toggenburg': {
-      'short': 'Sütçü keçi ırklarından; Türkiye’de de yetiştiriciliği yapılmıştır.',
-      'verim': 'Süt',
-      'uyum': 'Düzenli yemleme ve uygun barınak koşullarından yararlanır.',
-      'bakim': 'Meme sağlığı, tırnak bakımı ve kaliteli kaba yem önemlidir.',
-      'not': 'Süt odaklı sürülerde yerli ırklarla birlikte işletme şartlarına göre değerlendirilebilir.',
-    },
-  };
-
   void _breedDetail(String breed) {
-    final info = _breedInfo[breed];
+    final info = <String, String>{
+      'Simental':
+          'Et ve süt yönlü kombine bir sığır ırkıdır. Yetiştirme ve besleme koşulları performansı önemli ölçüde etkiler.',
+      'Holstein':
+          'Süt yönü güçlü bir sığır ırkıdır. Dengeli besleme ve uygun kaba yem yönetimi önemlidir.',
+      'Jersey':
+          'Küçük yapılı bir sütçü sığır ırkıdır. Süt yağ oranı ile öne çıkabilir.',
+      'Akkaraman':
+          'Türkiye’de yaygın koyun ırklarındandır. Dayanıklılığı ve mera koşullarına uyumu ile bilinir.',
+      'Merinos':
+          'Yapağı ve yetiştirme yönüyle bilinen koyun grubudur.',
+      'İvesi':
+          'Süt yönü öne çıkan koyun ırklarındandır.',
+      'Kıvırcık':
+          'Et kalitesi ile öne çıkan yerli koyun ırklarındandır.',
+      'Ankara Keçisi':
+          'Tiftik üretimiyle tanınan keçi ırkıdır.',
+    };
 
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.pets),
-            const SizedBox(width: 8),
-            Expanded(child: Text(breed)),
-          ],
-        ),
-        content: SizedBox(
-          width: 520,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  info?['short'] ??
-                      'Bu ırk için temel yetiştirme bilgisi AHIR AI ile ayrıca değerlendirilebilir.',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _breedInfoRow('Verim yönü', info?['verim'] ?? '-'),
-                _breedInfoRow('Uyum', info?['uyum'] ?? '-'),
-                _breedInfoRow('Bakım / besleme', info?['bakim'] ?? '-'),
-                _breedInfoRow('AHIR notu', info?['not'] ?? '-'),
-              ],
-            ),
-          ),
+        title: Text(breed),
+        content: Text(
+          '${info[breed] ?? 'Bu ırk için temel yetiştirme bilgileri AHIR AI ile ayrıca değerlendirilebilir.'}\n\n'
+          'Daha ayrıntılı bilgi için AHIR AI bölümüne “$breed özellikleri” yazabilirsin.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Kapat'),
           ),
-          FilledButton.icon(
+          FilledButton(
             onPressed: () {
               Navigator.pop(context);
               setState(() => page = 8);
             },
-            icon: const Icon(Icons.auto_awesome),
-            label: const Text('AHIR AI\'ya Sor'),
+            child: const Text('AHIR AI\'ya Sor'),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _breedInfoRow(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 3),
-          Text(value, style: const TextStyle(height: 1.35)),
         ],
       ),
     );
@@ -2526,13 +2039,11 @@ class _AhirHomeState extends State<AhirHome> {
         _actionCard(
           'Yedekleme',
           Icons.backup,
-          'Kayıtlar cihazda yerel olarak saklanır. Dışa aktarma/yedek dosyası sonraki aşamadır.',
+          'Verileri yedekleme özelliği sonraki teknik aşamada cihaz depolamasına bağlanacak.',
           () => _showSimpleInfo(
             'Yedekleme',
-            'Hayvan, sağlık, süt, yem ve hatırlatma kayıtları şu anda cihazdaki '
-            'yerel uygulama depolamasında tutuluyor. Uygulama kapatılıp açıldığında '
-            'kayıtların korunması amaçlanmıştır. Gerçek yedek dosyası oluşturma ve '
-            'geri yükleme özelliğini sonraki aşamada ekleyebiliriz.',
+            'Şu anda kayıtlar uygulama oturumu boyunca tutuluyor. '
+            'Kalıcı cihaz depolaması için sonraki aşamada yerel veritabanı ekleyebiliriz.',
           ),
         ),
         _actionCard(
