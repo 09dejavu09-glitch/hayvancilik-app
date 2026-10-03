@@ -1,6 +1,7 @@
 name: ahir_app
-description: "A new Flutter project."
+description: "Ahir Takip Ve Yönetim Uygulaması"
 publish_to: 'none'
+
 version: 1.0.0+1
 
 environment:
@@ -9,12 +10,21 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  google_mobile_ads: ^5.2.0
+  
+  # UI ve İkonlar
+  cupertino_icons: ^1.0.8
 
 dev_dependencies:
+  # Hatanın çözüldüğü doğru SDK tanımı:
   flutter_test:
-    sdk: flutter_test
-  flutter_lints: ^3.0.0
+    sdk: flutter
+  flutter_lints: ^5.0.0
 
 flutter:
   uses-material-design: true
+
+  # Görseller ve Varlıklar
+  assets:
+    - assets/
+    - assets/icons/
+    
