@@ -6,7 +6,7 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round">
         
-        <!-- AdMob App ID Eklendi (Kendi ID'nizle değiştirebilirsiniz) -->
+        <!-- AdMob Uygulama Kimliği (App ID) -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-3940256099942544~3375251502"/>
