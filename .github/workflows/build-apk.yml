@@ -8,6 +8,7 @@ on:
 
 jobs:
   build:
+  # Ubuntu ortamında çalıştır
     runs-on: ubuntu-latest
 
     steps:
@@ -19,11 +20,15 @@ jobs:
         with:
           channel: stable
 
-      - name: Android klasörünü oluştur
-        run: flutter create --platforms=android .
+      - name: Android klasörünü ve yapılandırmasını oluştur
+        run: |
+          flutter create . --platforms=android --project-name ahir_app --org com.ornek
 
-      - name: Kendi main.dart dosyamı kullan
-        run: cp main.dart lib/main.dart
+      - name: Kendi main.dart dosyamı kontrol et ve kopyala
+        run: |
+          if [ -f "main.dart" ]; then
+            cp main.dart lib/main.dart
+          fi
 
       - name: Paketleri yükle
         run: flutter pub get
