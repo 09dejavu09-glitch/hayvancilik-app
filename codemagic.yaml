@@ -1,38 +1,35 @@
 workflows:
-  android-build:
-    name: AHIR Android
+  android-workflow:
+    name: Android APK Oluşturma Workflow
+    max_build_duration: 60
+    instance_type: mac_mini_m1
     environment:
       flutter: stable
-
+      java: 17
     scripts:
-      - name: Temiz Android projesi oluştur
+      - name: AHIR ikonlarını yerleştir ve bağımlılıkları al
         script: |
-          rm -rf android
-          flutter create --platforms=android .
-
-      - name: Çalışan main.dart dosyasını bağla
+          flutter pub get
+      - name: Önbellek Temizliği ve APK oluştur
         script: |
-          mkdir -p lib
-          cp main.dart lib/main.dart
-
-      - name: AHIR ikonlarını yerleştir
-        script: |
-          mkdir -p /tmp/ahir_zip
-          unzip -q hayvancilik-app-main-with-android.zip 'hayvancilik-app-main/android/app/src/main/res/mipmap-*/ic_launcher*.png' -d /tmp/ahir_zip
-
-          for d in mdpi hdpi xhdpi xxhdpi xxxhdpi; do
-            src="/tmp/ahir_zip/hayvancilik-app-main/android/app/src/main/res/mipmap-$d"
-            dst="android/app/src/main/res/mipmap-$d"
-            if [ -d "$src" ]; then
-              cp "$src"/ic_launcher*.png "$dst"/
-            fi
-          done
-
-      - name: Paketleri yükle
-        script: flutter pub get
-
-      - name: APK oluştur
-        script: flutter build apk --release
-
+          #!/usr/bin/env bash
+          set -e
+          
+          # Hata veren önbellek kalıntılarını siler
+          flutter clean
+          
+          # Paketleri tekrar çeker
+          flutter pub get
+          
+          # APK derleme komutu
+          flutter build apk --release
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
+    publishing:
+      email:
+        recipients:
+          - user@example.com # E-posta adresiniz
+        notify:
+          failure: true
+          success: true
+          
