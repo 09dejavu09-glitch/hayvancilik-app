@@ -6,13 +6,17 @@ workflows:
       flutter: stable
 
     scripts:
+      - name: AHIR ikonlarını yükle
+        script: |
+          unzip -o AHIR_ikon_paketi.zip -d android/app/src/main/res[cite: 11]
+
       - name: Paketleri yükle
         script: |
-          flutter pub get
+          flutter pub get[cite: 4]
 
       - name: APK oluştur
         script: |
-          flutter build apk --release
+          flutter build apk --release[cite: 4]
 
     artifacts:
-      - build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/flutter-apk/*.apk[cite: 4]
