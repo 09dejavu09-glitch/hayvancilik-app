@@ -12,31 +12,10 @@ workflows:
           rm -rf android
           flutter create --platforms=android .
 
-      - name: main.dart oluştur
+      - name: main.dart dosyasını Flutter'a bağla
         script: |
           mkdir -p lib
           cp main.dart lib/main.dart
-
-      - name: AdMob App ID ekle
-        script: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          manifest = Path("android/app/src/main/AndroidManifest.xml")
-          text = manifest.read_text()
-
-          meta = '''        <meta-data
-              android:name="com.google.android.gms.ads.APPLICATION_ID"
-              android:value="ca-app-pub-3940256099942544~3347511713"/>'''
-
-          if "com.google.android.gms.ads.APPLICATION_ID" not in text:
-              text = text.replace(
-                  "</application>",
-                  meta + "\n    </application>",
-                  1
-              )
-              manifest.write_text(text)
-          PY
 
       - name: Paketleri yükle
         script: |
