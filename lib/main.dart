@@ -1,1649 +1,347 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 
 void main() {
-  runApp(const AhirApp());
+  runApp(const SigirTakipApp());
 }
 
-// ============================================================
-// MODELLER
-// ============================================================
-
-class Animal {
-  String tag;
-  String name;
-  String species;
-  String breed;
-  String gender;
-  String birth;
-  String weight;
-  String status;
-
-  Animal({
-    required this.tag,
-    required this.name,
-    required this.species,
-    required this.breed,
-    required this.gender,
-    required this.birth,
-    this.weight = '',
-    this.status = 'Aktif',
-  });
-}
-
-class HealthRecord {
-  String animalTag;
-  String type;
-  String title;
-  String date;
-  String note;
-
-  HealthRecord({
-    required this.animalTag,
-    required this.type,
-    required this.title,
-    required this.date,
-    this.note = '',
-  });
-}
-
-class MilkRecord {
-  String animalTag;
-  String date;
-  double morning;
-  double evening;
-  String note;
-
-  MilkRecord({
-    required this.animalTag,
-    required this.date,
-    required this.morning,
-    required this.evening,
-    this.note = '',
-  });
-
-  double get total => morning + evening;
-}
-
-class FeedItem {
-  String name;
-  double quantity;
-  String unit;
-
-  FeedItem({
-    required this.name,
-    required this.quantity,
-    required this.unit,
-  });
-}
-
-class ReminderItem {
-  String title;
-  String animalTag;
-  String date;
-  String note;
-
-  ReminderItem({
-    required this.title,
-    required this.animalTag,
-    required this.date,
-    this.note = '',
-  });
-}
-
-// ============================================================
-// UYGULAMA
-// ============================================================
-
-class AhirApp extends StatelessWidget {
-  const AhirApp({super.key});
+class SigirTakipApp extends StatelessWidget {
+  const SigirTakipApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'SığırTakip - Sürü Yönetimi',
       debugShowCheckedModeBanner: false,
-      title: 'AHIR AI',
       theme: ThemeData(
         useMaterial3: true,
-        colorSchemeSeed: const Color(0xFF2E7D32),
-        scaffoldBackgroundColor: const Color(0xFFF5F8F4),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFFF5F8F4),
-          elevation: 0,
-        ),
-        cardTheme: const CardThemeData(
-          elevation: 0,
-          margin: EdgeInsets.symmetric(vertical: 5),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1B5E20), // Çiftlik temasına uygun yeşil
+          brightness: Brightness.light,
         ),
       ),
-      home: const AhirHome(),
+      home: const AnaSayfa(),
     );
   }
 }
 
-class AhirHome extends StatefulWidget {
-  const AhirHome({super.key});
+// Hayvan Modeli
+class Hayvan {
+  final String kupeNo;
+  final String irk;
+  final String cinsiyet;
+  final DateTime dogumTarihi;
+  final String durum; // Sağmal, Kuru, Gebe, Besi
+  final double sonSutLitre;
 
-  @override
-  State<AhirHome> createState() => _AhirHomeState();
+  Hayvan({
+    required this.kupeNo,
+    required this.irk,
+    required this.cinsiyet,
+    required this.dogumTarihi,
+    required this.durum,
+    this.sonSutLitre = 0.0,
+  });
+
+  int get yasAy => (DateTime.now().difference(dogumTarihi).inDays / 30).floor();
 }
 
-class _AhirHomeState extends State<AhirHome> {
-  int page = 0;
+class AnaSayfa extends StatefulWidget {
+  const AnaSayfa({super.key});
 
-  final List<Animal> animals = [
-    Animal(
-      tag: 'TR 01 123456',
-      name: 'Boncuk',
-      species: 'Büyükbaş',
-      breed: 'Simental',
-      gender: 'Dişi',
-      birth: '12.04.2024',
-      weight: '520',
+  @override
+  State<AnaSayfa> createState() => _AnaSayfaState();
+}
+
+class _AnaSayfaState extends State<AnaSayfa> {
+  int _seciliSayfa = 0;
+
+  // Örnek Sürü Verileri
+  final List<Hayvan> _suru = [
+    Hayvan(
+      kupeNo: 'TR360001234567',
+      irk: 'Simental',
+      cinsiyet: 'Dişi',
+      dogumTarihi: DateTime(2022, 03, 15),
+      durum: 'Sağmal',
+      sonSutLitre: 24.5,
+    ),
+    Hayvan(
+      kupeNo: 'TR360001234568',
+      irk: 'Holstein',
+      cinsiyet: 'Dişi',
+      dogumTarihi: DateTime(2021, 08, 10),
+      durum: 'Gebe',
+      sonSutLitre: 18.0,
+    ),
+    Hayvan(
+      kupeNo: 'TR360001234569',
+      irk: 'Montofon',
+      cinsiyet: 'Erkek',
+      dogumTarihi: DateTime(2023, 11, 01),
+      durum: 'Besi',
+      sonSutLitre: 0.0,
     ),
   ];
 
-  final List<HealthRecord> healthRecords = [];
-  final List<MilkRecord> milkRecords = [];
-  final List<FeedItem> feeds = [
-    FeedItem(name: 'Arpa', quantity: 500, unit: 'kg'),
-    FeedItem(name: 'Mısır Silajı', quantity: 1200, unit: 'kg'),
-    FeedItem(name: 'Yonca', quantity: 350, unit: 'kg'),
-  ];
-  final List<ReminderItem> reminders = [];
-  bool _loaded = false;
-
-  static const _animalsKey = 'ahir_animals_v1';
-  static const _healthKey = 'ahir_health_v1';
-  static const _milkKey = 'ahir_milk_v1';
-  static const _feedsKey = 'ahir_feeds_v1';
-  static const _remindersKey = 'ahir_reminders_v1';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
+  void _yeniHayvanEkle(Hayvan hayvan) {
+    setState(() {
+      _suru.add(hayvan);
+    });
   }
-
-  Future<void> _loadData() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    try {
-      final savedAnimals = prefs.getString(_animalsKey);
-      if (savedAnimals != null) {
-        final list = jsonDecode(savedAnimals) as List;
-        animals
-          ..clear()
-          ..addAll(
-            list.map(
-              (e) => Animal(
-                tag: e['tag'] ?? '',
-                name: e['name'] ?? '',
-                species: e['species'] ?? 'Büyükbaş',
-                breed: e['breed'] ?? 'Simental',
-                gender: e['gender'] ?? 'Dişi',
-                birth: e['birth'] ?? '',
-                weight: e['weight'] ?? '',
-                status: e['status'] ?? 'Aktif',
-              ),
-            ),
-          );
-      }
-
-      final savedHealth = prefs.getString(_healthKey);
-      if (savedHealth != null) {
-        final list = jsonDecode(savedHealth) as List;
-        healthRecords
-          ..clear()
-          ..addAll(
-            list.map(
-              (e) => HealthRecord(
-                animalTag: e['animalTag'] ?? '',
-                type: e['type'] ?? 'Aşı',
-                title: e['title'] ?? '',
-                date: e['date'] ?? '',
-                note: e['note'] ?? '',
-              ),
-            ),
-          );
-      }
-
-      final savedMilk = prefs.getString(_milkKey);
-      if (savedMilk != null) {
-        final list = jsonDecode(savedMilk) as List;
-        milkRecords
-          ..clear()
-          ..addAll(
-            list.map(
-              (e) => MilkRecord(
-                animalTag: e['animalTag'] ?? '',
-                date: e['date'] ?? '',
-                morning: (e['morning'] ?? 0).toDouble(),
-                evening: (e['evening'] ?? 0).toDouble(),
-                note: e['note'] ?? '',
-              ),
-            ),
-          );
-      }
-
-      final savedFeeds = prefs.getString(_feedsKey);
-      if (savedFeeds != null) {
-        final list = jsonDecode(savedFeeds) as List;
-        feeds
-          ..clear()
-          ..addAll(
-            list.map(
-              (e) => FeedItem(
-                name: e['name'] ?? '',
-                quantity: (e['quantity'] ?? 0).toDouble(),
-                unit: e['unit'] ?? 'kg',
-              ),
-            ),
-          );
-      }
-
-      final savedReminders = prefs.getString(_remindersKey);
-      if (savedReminders != null) {
-        final list = jsonDecode(savedReminders) as List;
-        reminders
-          ..clear()
-          ..addAll(
-            list.map(
-              (e) => ReminderItem(
-                title: e['title'] ?? '',
-                animalTag: e['animalTag'] ?? '',
-                date: e['date'] ?? '',
-                note: e['note'] ?? '',
-              ),
-            ),
-          );
-      }
-    } catch (_) {}
-
-    if (mounted) {
-      setState(() => _loaded = true);
-    }
-  }
-
-  Future<void> _saveData() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    await prefs.setString(
-      _animalsKey,
-      jsonEncode(
-        animals
-            .map(
-              (a) => {
-                'tag': a.tag,
-                'name': a.name,
-                'species': a.species,
-                'breed': a.breed,
-                'gender': a.gender,
-                'birth': a.birth,
-                'weight': a.weight,
-                'status': a.status,
-              },
-            )
-            .toList(),
-      ),
-    );
-
-    await prefs.setString(
-      _healthKey,
-      jsonEncode(
-        healthRecords
-            .map(
-              (r) => {
-                'animalTag': r.animalTag,
-                'type': r.type,
-                'title': r.title,
-                'date': r.date,
-                'note': r.note,
-              },
-            )
-            .toList(),
-      ),
-    );
-
-    await prefs.setString(
-      _milkKey,
-      jsonEncode(
-        milkRecords
-            .map(
-              (r) => {
-                'animalTag': r.animalTag,
-                'date': r.date,
-                'morning': r.morning,
-                'evening': r.evening,
-                'note': r.note,
-              },
-            )
-            .toList(),
-      ),
-    );
-
-    await prefs.setString(
-      _feedsKey,
-      jsonEncode(
-        feeds
-            .map(
-              (f) => {
-                'name': f.name,
-                'quantity': f.quantity,
-                'unit': f.unit,
-              },
-            )
-            .toList(),
-      ),
-    );
-
-    await prefs.setString(
-      _remindersKey,
-      jsonEncode(
-        reminders
-            .map(
-              (r) => {
-                'title': r.title,
-                'animalTag': r.animalTag,
-                'date': r.date,
-                'note': r.note,
-              },
-            )
-            .toList(),
-      ),
-    );
-  }
-
-  final List<String> breeds = [
-    'Simental', 'Holstein', 'Montofon', 'Jersey', 'Angus', 'Hereford',
-    'Limuzin', 'Şarole', 'Belçika Mavisi', 'Yerli Kara', 'Boz Irk',
-    'Güney Anadolu Kırmızısı', 'Doğu Anadolu Kırmızısı', 'Zavot',
-    'Anadolu Mandası', 'Akkaraman', 'Kangal Akkaraman', 'Morkaraman',
-    'Dağlıç', 'İvesi', 'Karagül', 'Norduz', 'Çine Çaparı', 'Hemşin',
-    'Tuj', 'Kıvırcık', 'Karayaka', 'Sakız', 'Gökçeada', 'Merinos',
-    'Pırlak', 'Ramlıç', 'Anadolu Merinosu', 'Orta Anadolu Merinosu',
-    'Karacabey Merinosu', 'Malya', 'Acıpayam', 'Sönmez', 'Türkgeldi',
-    'Tahirova', 'Menemen', 'Karya', 'Bafra', 'Güney Karaman',
-    'Ankara Keçisi', 'Kıl Keçisi', 'Norduz Keçisi', 'Kilis Keçisi',
-    'Honamlı Keçisi', 'Saanen', 'Toggenburg',
-  ];
-
-  List<String> _breedsForSpecies(String species) {
-    switch (species) {
-      case 'Büyükbaş':
-        return [
-          'Simental', 'Holstein', 'Montofon', 'Jersey', 'Angus', 'Hereford',
-          'Limuzin', 'Şarole', 'Belçika Mavisi', 'Yerli Kara', 'Boz Irk',
-          'Güney Anadolu Kırmızısı', 'Doğu Anadolu Kırmızısı', 'Zavot',
-        ];
-      case 'Manda':
-        return ['Anadolu Mandası'];
-      case 'Koyun':
-        return [
-          'Akkaraman', 'Kangal Akkaraman', 'Morkaraman', 'Dağlıç', 'İvesi',
-          'Karagül', 'Norduz', 'Çine Çaparı', 'Hemşin', 'Tuj', 'Kıvırcık',
-          'Karayaka', 'Sakız', 'Gökçeada', 'Merinos', 'Pırlak', 'Ramlıç',
-          'Anadolu Merinosu', 'Orta Anadolu Merinosu', 'Karacabey Merinosu',
-          'Malya', 'Acıpayam', 'Sönmez', 'Türkgeldi', 'Tahirova', 'Menemen',
-          'Karya', 'Bafra', 'Güney Karaman',
-        ];
-      case 'Keçi':
-        return [
-          'Ankara Keçisi', 'Kıl Keçisi', 'Norduz Keçisi', 'Kilis Keçisi',
-          'Honamlı Keçisi', 'Saanen', 'Toggenburg',
-        ];
-      default:
-        return breeds;
-    }
-  }
-
-  final titles = [
-    'AHIR AI',
-    'Hayvanlar',
-    'Irklar',
-    'Sağlık',
-    'Süt Takibi',
-    'Rasyon',
-    'Raporlar',
-    'Ayarlar',
-    'AHIR AI',
-  ];
 
   @override
   Widget build(BuildContext context) {
+    final List<Widget> sayfalar = [
+      _buildOzetSekmesi(),
+      _buildHayvanListesiSekmesi(),
+      _buildSaglikTakvimSekmesi(),
+    ];
+
     return Scaffold(
       appBar: AppBar(
-        title: Row(
+        title: const Row(
           children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE1F0E2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.pets, color: Color(0xFF2E7D32)),
-            ),
-            const SizedBox(width: 10),
-            Text(
-              titles[page],
-              style: const TextStyle(fontWeight: FontWeight.w900),
-            ),
+            Icon(Icons.pets, color: Colors.white),
+            SizedBox(width: 8),
+            Text('SığırTakip', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ],
         ),
-        actions: [
-          IconButton(
-            tooltip: 'AHIR AI',
-            onPressed: () => setState(() => page = 8),
-            icon: const Icon(Icons.auto_awesome),
-          ),
-        ],
+        backgroundColor: const Color(0xFF1B5E20),
+        elevation: 2,
       ),
-      body: _loaded
-          ? IndexedStack(
-              index: page,
-              children: [
-                _dashboard(),
-                _animals(),
-                _breeds(),
-                _health(),
-                _milk(),
-                _ration(),
-                _reports(),
-                _settings(),
-                const AhirAI(),
-              ],
-            )
-          : const Center(
-              child: CircularProgressIndicator(),
-            ),
+      body: sayfalar[_seciliSayfa],
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _hayvanEkleDiyaloguGoster(context),
+        backgroundColor: const Color(0xFF1B5E20),
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text('Hayvan Ekle', style: TextStyle(color: Colors.white)),
+      ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: page <= 3 ? page : 0,
-        onDestinationSelected: (i) => setState(() => page = i),
+        selectedIndex: _seciliSayfa,
+        onDestinationSelected: (index) {
+          setState(() {
+            _seciliSayfa = index;
+          });
+        },
         destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Ana Sayfa',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.pets_outlined),
-            selectedIcon: Icon(Icons.pets),
-            label: 'Hayvanlar',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.category_outlined),
-            selectedIcon: Icon(Icons.category),
-            label: 'Irklar',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.medical_services_outlined),
-            selectedIcon: Icon(Icons.medical_services),
-            label: 'Sağlık',
-          ),
-        ],
-      ),
-      floatingActionButton: page == 0
-          ? FloatingActionButton.extended(
-              onPressed: () => setState(() => page = 8),
-              icon: const Icon(Icons.auto_awesome),
-              label: const Text('AHIR AI'),
-            )
-          : null,
-    );
-  }
-
-  Widget _dashboard() {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-      children: [
-        _hero(),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: _miniStat('${animals.length}', 'Hayvan', Icons.pets),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _miniStat('${healthRecords.length}', 'Sağlık Kaydı', Icons.medical_services),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        const Text(
-          'Çiftliğini yönet',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
-        ),
-        const SizedBox(height: 10),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: 1.28,
-          children: [
-            _tile('Hayvanlar', Icons.pets, 1),
-            _tile('Sağlık', Icons.medical_services, 3),
-            _tile('Süt', Icons.local_drink, 4),
-            _tile('Rasyon', Icons.grass, 5),
-            _tile('Raporlar', Icons.bar_chart, 6),
-            _tile('AHIR AI', Icons.auto_awesome, 8),
-          ],
-        ),
-        const SizedBox(height: 18),
-        _sectionTitle('Bugünün özeti'),
-        _summaryTile(
-          Icons.vaccines,
-          'Aşı / Sağlık',
-          healthRecords.isEmpty
-              ? 'Henüz sağlık kaydı yok'
-              : '${healthRecords.length} sağlık kaydı bulunuyor',
-          3,
-        ),
-        _summaryTile(
-          Icons.local_drink,
-          'Süt Takibi',
-          milkRecords.isEmpty
-              ? 'Henüz süt kaydı yok'
-              : '${milkRecords.length} süt kaydı bulunuyor',
-          4,
-        ),
-        _summaryTile(
-          Icons.notifications_active,
-          'Hatırlatmalar',
-          reminders.isEmpty
-              ? 'Henüz hatırlatma yok'
-              : '${reminders.length} hatırlatma bulunuyor',
-          6,
-        ),
-      ],
-    );
-  }
-
-  Widget _hero() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1B5E20), Color(0xFF43A047)],
-        ),
-        borderRadius: BorderRadius.circular(26),
-      ),
-      child: const Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'AHIR AI',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                SizedBox(height: 5),
-                Text(
-                  'Akıllı Hayvancılık Yönetimi',
-                  style: TextStyle(color: Colors.white70, fontSize: 15),
-                ),
-                SizedBox(height: 15),
-                Text(
-                  'Çiftliğin cebindeki yardımcısı.',
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                ),
-              ],
-            ),
-          ),
-          FarmCharacter(type: CharacterType.cow, size: 95),
+          NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard), label: 'Özet'),
+          NavigationDestination(icon: Icon(Icons.list_alt_outlined), selectedIcon: Icon(Icons.list_alt), label: 'Sürü Listesi'),
+          NavigationDestination(icon: Icon(Icons.medical_services_outlined), selectedIcon: Icon(Icons.medical_services), label: 'Sağlık & Aşı'),
         ],
       ),
     );
   }
 
-  Widget _miniStat(String value, String label, IconData icon) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            CircleAvatar(
-              backgroundColor: const Color(0xFFE1F0E2),
-              child: Icon(icon, color: const Color(0xFF2E7D32)),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  Text(label),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Özet ve İstatistikler Sayfası
+  Widget _buildOzetSekmesi() {
+    final toplamHayvan = _suru.length;
+    final sagmalSayisi = _suru.where((h) => h.durum == 'Sağmal').length;
+    final gebeSayisi = _suru.where((h) => h.durum == 'Gebe').length;
+    final toplamSut = _suru.fold(0.0, (sum, item) => sum + item.sonSutLitre);
 
-  Widget _tile(String title, IconData icon, int target) {
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: () => setState(() => page = target),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircleAvatar(
-              radius: 25,
-              backgroundColor: const Color(0xFFE1F0E2),
-              child: Icon(icon, color: const Color(0xFF2E7D32)),
-            ),
-            const SizedBox(height: 9),
-            Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.w800),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _summaryTile(
-    IconData icon,
-    String title,
-    String subtitle,
-    int target,
-  ) {
-    return Card(
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFFE1F0E2),
-          child: Icon(icon, color: const Color(0xFF2E7D32)),
-        ),
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w800),
-        ),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => setState(() => page = target),
-      ),
-    );
-  }
-
-  Widget _sectionTitle(String s) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Text(
-          s,
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-      );
-
-  Widget _animals() {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
-          child: FilledButton.icon(
-            style: FilledButton.styleFrom(
-              minimumSize: const Size(double.infinity, 52),
-            ),
-            onPressed: _addAnimal,
-            icon: const Icon(Icons.add),
-            label: const Text('Yeni Hayvan Ekle'),
-          ),
-        ),
-        Expanded(
-          child: animals.isEmpty
-              ? _emptyState(
-                  Icons.pets,
-                  'Henüz hayvan yok',
-                  'Yeni Hayvan Ekle butonundan ilk hayvanını kaydet.',
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  itemCount: animals.length,
-                  itemBuilder: (_, i) {
-                    final a = animals[i];
-                    return Card(
-                      child: ListTile(
-                        leading: FarmCharacter(
-                          type: _characterFor(a.species),
-                          size: 54,
-                        ),
-                        title: Text(
-                          a.tag,
-                          style: const TextStyle(fontWeight: FontWeight.w900),
-                        ),
-                        subtitle: Text(
-                          '${a.name.isEmpty ? 'İsimsiz' : a.name} • ${a.breed} • ${a.gender}'
-                          '${a.weight.isEmpty ? '' : ' • ${a.weight} kg'}',
-                        ),
-                        trailing: PopupMenuButton<String>(
-                          onSelected: (v) {
-                            if (v == 'detail') _animalDetail(a);
-                            if (v == 'health') {
-                              setState(() => page = 3);
-                              _addHealthRecord(initialAnimal: a.tag);
-                            }
-                            if (v == 'milk') {
-                              setState(() => page = 4);
-                              _addMilkRecord(initialAnimal: a.tag);
-                            }
-                            if (v == 'delete') {
-                              final tag = a.tag;
-                              setState(() {
-                                animals.removeAt(i);
-                                healthRecords.removeWhere((x) => x.animalTag == tag);
-                                milkRecords.removeWhere((x) => x.animalTag == tag);
-                                reminders.removeWhere((x) => x.animalTag == tag);
-                              });
-                              _saveData();
-                            }
-                          },
-                          itemBuilder: (_) => const [
-                            PopupMenuItem(value: 'detail', child: Text('Detay')),
-                            PopupMenuItem(value: 'health', child: Text('Sağlık Kaydı')),
-                            PopupMenuItem(value: 'milk', child: Text('Süt Kaydı')),
-                            PopupMenuItem(value: 'delete', child: Text('Sil')),
-                          ],
-                        ),
-                        onTap: () => _animalDetail(a),
-                      ),
-                    );
-                  },
-                ),
-        ),
-      ],
-    );
-  }
-
-  void _addAnimal() {
-    final tag = TextEditingController();
-    final name = TextEditingController();
-    final birth = TextEditingController();
-    final weight = TextEditingController();
-
-    String species = 'Büyükbaş';
-    String gender = 'Dişi';
-    String breed = breeds.first;
-
-    showDialog(
-      context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setD) => AlertDialog(
-          title: const Text('Yeni Hayvan'),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                TextField(
-                  controller: tag,
-                  decoration: const InputDecoration(
-                    labelText: 'Küpe No *',
-                    prefixIcon: Icon(Icons.confirmation_number),
-                  ),
-                ),
-                TextField(
-                  controller: name,
-                  decoration: const InputDecoration(
-                    labelText: 'Hayvan Adı',
-                    prefixIcon: Icon(Icons.pets),
-                  ),
-                ),
-                TextField(
-                  controller: birth,
-                  decoration: const InputDecoration(
-                    labelText: 'Doğum tarihi',
-                    hintText: 'GG.AA.YYYY',
-                  ),
-                ),
-                TextField(
-                  controller: weight,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Canlı ağırlık (kg)',
-                  ),
-                ),
-                DropdownButtonFormField<String>(
-                  value: species,
-                  decoration: const InputDecoration(labelText: 'Tür'),
-                  items: const ['Büyükbaş', 'Manda', 'Koyun', 'Keçi']
-                      .map((x) => DropdownMenuItem(value: x, child: Text(x)))
-                      .toList(),
-                  onChanged: (v) {
-                    if (v == null) return;
-                    setD(() {
-                      species = v;
-                      final list = _breedsForSpecies(species);
-                      breed = list.first;
-                    });
-                  },
-                ),
-                DropdownButtonFormField<String>(
-                  value: breed,
-                  decoration: const InputDecoration(
-                    labelText: 'Irk',
-                    helperText: 'Seçtiğin türe göre ırklar otomatik filtrelenir.',
-                  ),
-                  items: _breedsForSpecies(species)
-                      .map((x) => DropdownMenuItem(value: x, child: Text(x)))
-                      .toList(),
-                  onChanged: (v) => setD(() => breed = v!),
-                ),
-                DropdownButtonFormField<String>(
-                  value: gender,
-                  decoration: const InputDecoration(labelText: 'Cinsiyet'),
-                  items: const ['Dişi', 'Erkek']
-                      .map((x) => DropdownMenuItem(value: x, child: Text(x)))
-                      .toList(),
-                  onChanged: (v) => setD(() => gender = v!),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('İptal'),
-            ),
-            FilledButton.icon(
-              onPressed: () {
-                if (tag.text.trim().isEmpty) {
-                  _snack('Küpe numarası boş bırakılamaz.');
-                  return;
-                }
-
-                setState(
-                  () => animals.add(
-                    Animal(
-                      tag: tag.text.trim(),
-                      name: name.text.trim(),
-                      species: species,
-                      breed: breed,
-                      gender: gender,
-                      birth: birth.text.trim(),
-                      weight: weight.text.trim(),
-                    ),
-                  ),
-                );
-                _saveData();
-
-                Navigator.pop(ctx);
-                _snack('Hayvan başarıyla eklendi.');
-              },
-              icon: const Icon(Icons.save),
-              label: const Text('Kaydet'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _animalDetail(Animal a) {
-    showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(22, 10, 22, 30),
-        child: ListView(
-          shrinkWrap: true,
-          children: [
-            Row(
-              children: [
-                FarmCharacter(type: _characterFor(a.species), size: 76),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Text(
-                    a.tag,
-                    style: const TextStyle(
-                      fontSize: 23,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            _infoRow('Adı', a.name.isEmpty ? '-' : a.name),
-            _infoRow('Tür', a.species),
-            _infoRow('Irk', a.breed),
-            _infoRow('Cinsiyet', a.gender),
-            _infoRow('Doğum', a.birth.isEmpty ? '-' : a.birth),
-            _infoRow('Ağırlık', a.weight.isEmpty ? '-' : '${a.weight} kg'),
-            const Divider(height: 30),
-            ListTile(
-              leading: const Icon(Icons.vaccines),
-              title: const Text('Sağlık geçmişi'),
-              subtitle: Text(
-                '${healthRecords.where((x) => x.animalTag == a.tag).length} kayıt',
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                setState(() => page = 3);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.local_drink),
-              title: const Text('Süt kayıtları'),
-              subtitle: Text(
-                '${milkRecords.where((x) => x.animalTag == a.tag).length} kayıt',
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                setState(() => page = 4);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _infoRow(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-          Expanded(child: Text(value)),
-        ],
-      ),
-    );
-  }
-
-  CharacterType _characterFor(String species) {
-    if (species == 'Koyun') return CharacterType.sheep;
-    if (species == 'Keçi') return CharacterType.goat;
-    return CharacterType.cow;
-  }
-
-  Widget _breeds() {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 10, 14, 30),
-      children: [
-        const Text(
-          'Türkiye Hayvan Irkları',
-          style: TextStyle(fontSize: 23, fontWeight: FontWeight.w900),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'Irka dokun. Verim yönü, öne çıkan özelliği, bakım yaklaşımı ve '
-          'Türkiye’deki kullanım alanı hakkında kısa ve pratik bilgi al.',
-        ),
-        const SizedBox(height: 12),
-        _breedGroup('Büyükbaş', CharacterType.cow, _breedsForSpecies('Büyükbaş')),
-        _breedGroup('Manda', CharacterType.cow, _breedsForSpecies('Manda')),
-        _breedGroup('Koyun', CharacterType.sheep, _breedsForSpecies('Koyun')),
-        _breedGroup('Keçi', CharacterType.goat, _breedsForSpecies('Keçi')),
-      ],
-    );
-  }
-
-  Widget _breedGroup(String title, CharacterType type, List<String> names) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ExpansionTile(
-        initiallyExpanded: title == 'Büyükbaş',
-        leading: FarmCharacter(type: type, size: 52),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-        subtitle: Text('${names.length} ırk'),
-        children: names
-            .map(
-              (b) => ListTile(
-                leading: const Icon(Icons.pets),
-                title: Text(b),
-                subtitle: Text(
-                  _breedInfo[b]?['short'] ?? 'Kısa ırk bilgisi için dokun.',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _breedDetail(b),
-              ),
-            )
-            .toList(),
-      ),
-    );
-  }
-
-  final Map<String, Map<String, String>> _breedInfo = {
-    'Simental': {
-      'short': 'Et ve süt yönünü birlikte taşıyan güçlü kombine sığır.',
-      'verim': 'Et + süt',
-      'uyum': 'Farklı işletme koşullarına uyum sağlayabilen kombine yapı.',
-      'bakim': 'Kaba yem kalitesi, enerji-protein dengesi ve ayak sağlığı izlenmeli.',
-      'not': 'Çift amaçlı işletmelerde tercih edilir.',
-    },
-    'Holstein': {
-      'short': 'Süt verimi yönü belirgin, yaygın kullanılan kültür ırkı.',
-      'verim': 'Süt',
-      'uyum': 'İyi bakım ve düzenli besleme ister.',
-      'bakim': 'Enerji dengesi, meme sağlığı ve ayak-tırnak yakından takip edilmeli.',
-      'not': 'Süt işletmelerinde yem yönetimi önemlidir.',
-    },
-  };
-
-  void _breedDetail(String breed) {
-    final info = _breedInfo[breed];
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.pets),
-            const SizedBox(width: 8),
-            Expanded(child: Text(breed)),
-          ],
-        ),
-        content: SizedBox(
-          width: 520,
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  info?['short'] ?? 'Temel yetiştirme bilgisi.',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 16),
-                _breedInfoRow('Verim yönü', info?['verim'] ?? '-'),
-                _breedInfoRow('Uyum', info?['uyum'] ?? '-'),
-                _breedInfoRow('Bakım / besleme', info?['bakim'] ?? '-'),
-                _breedInfoRow('AHIR notu', info?['not'] ?? '-'),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Kapat'),
-          ),
-          FilledButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              setState(() => page = 8);
-            },
-            icon: const Icon(Icons.auto_awesome),
-            label: const Text('AHIR AI\'ya Sor'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _breedInfoRow(String title, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 3),
-          Text(value, style: const TextStyle(height: 1.35)),
+          const Text('Sürü Genel Durumu', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.4,
+            children: [
+              _buildKart('Toplam Hayvan', '$toplamHayvan Adet', Icons.groups, Colors.blue),
+              _buildKart('Günlük Süt', '${toplamSut.toStringAsFixed(1)} Litre', Icons.water_drop, Colors.cyan),
+              _buildKart('Sağmal Sığır', '$sagmalSayisi Adet', Icons.agriculture, Colors.green),
+              _buildKart('Gebe Hayvan', '$gebeSayisi Adet', Icons.child_care, Colors.orange),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Text('Aşı & Kontrol Uyarıları', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Card(
+            color: Colors.amber.shade50,
+            child: const ListTile(
+              leading: Icon(Icons.warning_amber_rounded, color: Colors.orange),
+              title: Text('Şap Aşısı Zamanı Yaklaşıyor'),
+              subtitle: Text('Sürüdeki 3 hayvanın son aşı tarihi üzerinden 6 ay geçti.'),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _health() {
+  // Hayvan Listesi Sayfası
+  Widget _buildHayvanListesiSekmesi() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(8.0),
+      itemCount: _suru.length,
+      itemBuilder: (context, index) {
+        final hayvan = _suru[index];
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: const Color(0xFF1B5E20),
+              child: Text(hayvan.cinsiyet == 'Dişi' ? '♀' : '♂', style: const TextStyle(color: Colors.white, fontSize: 18)),
+            ),
+            title: Text(hayvan.kupeNo, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('${hayvan.irk} • ${hayvan.durum} • ${hayvan.yasAy} Aylık'),
+            trailing: hayvan.sonSutLitre > 0
+                ? Chip(
+                    label: Text('${hayvan.sonSutLitre} L'),
+                    avatar: const Icon(Icons.local_drink, size: 16),
+                    backgroundColor: Colors.blue.shade50,
+                  )
+                : null,
+          ),
+        );
+      },
+    );
+  }
+
+  // Sağlık Takvim Sayfası
+  Widget _buildSaglikTakvimSekmesi() {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 30),
-      children: [
-        _actionCard('Aşı Kayıtları', Icons.vaccines, 'Aşı adı, hayvan ve tarihi kaydet.', () => _addHealthRecord(type: 'Aşı')),
-        _actionCard('Hastalık / Tedavi', Icons.healing, 'Hastalık ve tedavi geçmişini tut.', () => _addHealthRecord(type: 'Tedavi')),
-        _actionCard('İlaçlar', Icons.medication, 'Kullanılan ilaçları kayıt altına al.', () => _addHealthRecord(type: 'İlaç')),
-        _actionCard('Hatırlatmalar', Icons.notifications_active, 'Aşı, kontrol ve diğer işlemler için tarih oluştur.', _addReminder),
-        const SizedBox(height: 12),
-        _sectionTitle('Kayıtlar'),
-        if (healthRecords.isEmpty)
-          _emptyState(Icons.medical_services, 'Sağlık kaydı yok', 'Yukarıdaki butonlardan kayıt ekleyebilirsin.')
-        else
-          ...healthRecords.reversed.map(
-            (r) => Card(
-              child: ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Color(0xFFE1F0E2),
-                  child: Icon(Icons.medical_services, color: Color(0xFF2E7D32)),
-                ),
-                title: Text(r.title, style: const TextStyle(fontWeight: FontWeight.w800)),
-                subtitle: Text('${r.type} • ${r.animalTag} • ${r.date}'),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () {
-                    setState(() => healthRecords.remove(r));
-                    _saveData();
-                  },
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  void _addHealthRecord({String? type, String? initialAnimal}) {
-    final title = TextEditingController();
-    final date = TextEditingController(text: _today());
-    final note = TextEditingController();
-
-    String selectedType = type ?? 'Aşı';
-    String animalTag = initialAnimal ?? (animals.isNotEmpty ? animals.first.tag : '');
-
-    if (animals.isEmpty) {
-      _snack('Önce en az bir hayvan eklemelisin.');
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setD) => AlertDialog(
-          title: Text('$selectedType Kaydı'),
-          content: SingleChildScrollView(
-            child: Column(
-              children: [
-                DropdownButtonFormField<String>(
-                  value: animalTag,
-                  decoration: const InputDecoration(labelText: 'Hayvan'),
-                  items: animals
-                      .map((a) => DropdownMenuItem(value: a.tag, child: Text(a.tag)))
-                      .toList(),
-                  onChanged: (v) => setD(() => animalTag = v!),
-                ),
-                TextField(
-                  controller: title,
-                  decoration: const InputDecoration(labelText: 'Başlık / Aşı adı'),
-                ),
-                TextField(
-                  controller: date,
-                  decoration: const InputDecoration(labelText: 'Tarih'),
-                ),
-                TextField(
-                  controller: note,
-                  decoration: const InputDecoration(labelText: 'Not'),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('İptal'),
-            ),
-            FilledButton(
-              onPressed: () {
-                if (title.text.trim().isEmpty) return;
-                setState(
-                  () => healthRecords.add(
-                    HealthRecord(
-                      animalTag: animalTag,
-                      type: selectedType,
-                      title: title.text.trim(),
-                      date: date.text.trim(),
-                      note: note.text.trim(),
-                    ),
-                  ),
-                );
-                _saveData();
-                Navigator.pop(ctx);
-              },
-              child: const Text('Kaydet'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _addReminder() {
-    final title = TextEditingController();
-    final date = TextEditingController(text: _today());
-    final note = TextEditingController();
-    String animalTag = animals.isEmpty ? '' : animals.first.tag;
-
-    showDialog(
-      context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setD) => AlertDialog(
-          title: const Text('Yeni Hatırlatma'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: title,
-                decoration: const InputDecoration(labelText: 'Başlık'),
-              ),
-              TextField(
-                controller: date,
-                decoration: const InputDecoration(labelText: 'Tarih'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('İptal'),
-            ),
-            FilledButton(
-              onPressed: () {
-                setState(
-                  () => reminders.add(
-                    ReminderItem(
-                      title: title.text.trim(),
-                      animalTag: animalTag,
-                      date: date.text.trim(),
-                      note: note.text.trim(),
-                    ),
-                  ),
-                );
-                _saveData();
-                Navigator.pop(ctx);
-              },
-              child: const Text('Kaydet'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _milk() {
-    double total = milkRecords.fold(0, (sum, item) => sum + item.total);
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 30),
-      children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                const CircleAvatar(
-                  backgroundColor: Color(0xFFE1F0E2),
-                  child: Icon(Icons.local_drink, color: Color(0xFF2E7D32)),
-                ),
-                const SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Toplam Süt'),
-                    Text(
-                      '${total.toStringAsFixed(1)} L',
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-        _actionCard('Süt Kaydı Ekle', Icons.add, 'Sabah ve akşam sütünü kaydet.', _addMilkRecord),
-      ],
-    );
-  }
-
-  void _addMilkRecord({String? initialAnimal}) {
-    if (animals.isEmpty) return;
-    final morning = TextEditingController();
-    final evening = TextEditingController();
-    String animalTag = initialAnimal ?? animals.first.tag;
-
-    showDialog(
-      context: context,
-      builder: (_) => StatefulBuilder(
-        builder: (ctx, setD) => AlertDialog(
-          title: const Text('Süt Kaydı'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: morning, decoration: const InputDecoration(labelText: 'Sabah (L)')),
-              TextField(controller: evening, decoration: const InputDecoration(labelText: 'Akşam (L)')),
-            ],
-          ),
-          actions: [
-            FilledButton(
-              onPressed: () {
-                final m = double.tryParse(morning.text.replaceAll(',', '.')) ?? 0;
-                final e = double.tryParse(evening.text.replaceAll(',', '.')) ?? 0;
-                setState(
-                  () => milkRecords.add(
-                    MilkRecord(
-                      animalTag: animalTag,
-                      date: _today(),
-                      morning: m,
-                      evening: e,
-                    ),
-                  ),
-                );
-                _saveData();
-                Navigator.pop(ctx);
-              },
-              child: const Text('Kaydet'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _ration() {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 30),
-      children: [
-        _actionCard('Yemler', Icons.grass, 'Stokları yönet.', () {}),
-      ],
-    );
-  }
-
-  void _addFeed() {}
-  void _feedStock() {}
-
-  Widget _reports() {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 30),
+      padding: const EdgeInsets.all(16.0),
       children: const [
-        Text('Raporlar', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-      ],
-    );
-  }
-
-  Widget _reportCard(String title, IconData icon, String subtitle, VoidCallback onTap) {
-    return Card(child: ListTile(title: Text(title), onTap: onTap));
-  }
-
-  void _showReport(String title, String text) {}
-
-  Widget _settings() {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 30),
-      children: [
-        _actionCard('İşletme Bilgileri', Icons.business, 'Düzenle', _businessInfo),
-      ],
-    );
-  }
-
-  void _businessInfo() {}
-
-  Widget _actionCard(String title, IconData icon, String subtitle, VoidCallback onTap) {
-    return Card(
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFFE1F0E2),
-          child: Icon(icon, color: const Color(0xFF2E7D32)),
+        Text('Planlanan Sağlık İşlemleri', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        SizedBox(height: 12),
+        ListTile(
+          leading: Icon(Icons.vaccines, color: Colors.red),
+          title: Text('Brucella Aşı Taraması'),
+          subtitle: Text('Tarih: 12 Ekim 2026 - Tüm Buzağılar'),
+          trailing: Icon(Icons.chevron_right),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w900)),
-        subtitle: Text(subtitle),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
-      ),
+        Divider(),
+        ListTile(
+          leading: Icon(Icons.health_and_safety, color: Colors.blue),
+          title: Text('Periyodik Tırnak Bakımı'),
+          subtitle: Text('Tarih: 20 Ekim 2026 - Sağmal Grubu'),
+          trailing: Icon(Icons.chevron_right),
+        ),
+      ],
     );
   }
 
-  Widget _emptyState(IconData icon, String title, String subtitle) {
+  Widget _buildKart(String baslik, String deger, IconData ikon, Color renk) {
     return Card(
+      elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(28),
+        padding: const EdgeInsets.all(12.0),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 52, color: const Color(0xFF2E7D32)),
-            const SizedBox(height: 10),
-            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-            Text(subtitle, textAlign: TextAlign.center),
+            Row(
+              children: [
+                Icon(ikon, color: renk, size: 28),
+                const Spacer(),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(baslik, style: TextStyle(color: Colors.grey.shade700, fontSize: 12)),
+            const SizedBox(height: 2),
+            Text(deger, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ],
         ),
       ),
     );
   }
 
-  String _today() {
-    final now = DateTime.now();
-    return '${now.day.toString().padLeft(2, '0')}.${now.month.toString().padLeft(2, '0')}.${now.year}';
-  }
+  // Yeni Hayvan Ekleme Form Modalı
+  void _hayvanEkleDiyaloguGoster(BuildContext context) {
+    final kupeController = TextEditingController();
+    final irkController = TextEditingController();
+    String seciliDurum = 'Sağmal';
+    String seciliCinsiyet = 'Dişi';
 
-  void _snack(String text) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
-  }
-
-  void _showSimpleInfo(String title, String text) {}
-}
-
-// ============================================================
-// AHIR AI
-// ============================================================
-
-class AhirAI extends StatefulWidget {
-  const AhirAI({super.key});
-
-  @override
-  State<AhirAI> createState() => _AhirAIState();
-}
-
-class _AhirAIState extends State<AhirAI> {
-  final input = TextEditingController();
-  final scroll = ScrollController();
-  bool sending = false;
-
-  final messages = <Map<String, String>>[
-    {
-      'role': 'ai',
-      'text': 'Merhaba! Ben AHIR AI 🤖🐄\n\nBana hayvanın bilgilerini yaz, yardımcı olayım.',
-    }
-  ];
-
-  @override
-  void dispose() {
-    input.dispose();
-    scroll.dispose();
-    super.dispose();
-  }
-
-  void ask() {
-    final q = input.text.trim();
-    if (q.isEmpty || sending) return;
-
-    setState(() {
-      sending = true;
-      messages.add({'role': 'user', 'text': q});
-      input.clear();
-    });
-
-    Future.delayed(const Duration(milliseconds: 250), () {
-      if (!mounted) return;
-      setState(() {
-        messages.add({'role': 'ai', 'text': 'Ön değerlendirme yapıldı.'});
-        sending = false;
-      });
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: ListView.builder(
-            controller: scroll,
-            padding: const EdgeInsets.all(16),
-            itemCount: messages.length,
-            itemBuilder: (_, i) {
-              final m = messages[i];
-              final ai = m['role'] == 'ai';
-              return Align(
-                alignment: ai ? Alignment.centerLeft : Alignment.centerRight,
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: ai ? Colors.white : const Color(0xFFE1F0E2),
-                    borderRadius: BorderRadius.circular(18),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+                top: 16,
+                left: 16,
+                right: 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Yeni Hayvan Kaydı', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: kupeController,
+                    decoration: const InputDecoration(labelText: 'Küpe Numarası (Örn: TR36...)', border: OutlineInputBorder()),
                   ),
-                  child: Text(m['text']!),
-                ),
-              );
-            },
-          ),
-        ),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: input,
-                    decoration: const InputDecoration(hintText: 'AHIR AI\'a sor...'),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: irkController,
+                    decoration: const InputDecoration(labelText: 'Irkı (Simental, Holstein vb.)', border: OutlineInputBorder()),
                   ),
-                ),
-                FloatingActionButton(
-                  mini: true,
-                  onPressed: sending ? null : ask,
-                  child: const Icon(Icons.send),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: seciliCinsiyet,
+                          decoration: const InputDecoration(labelText: 'Cinsiyet', border: OutlineInputBorder()),
+                          items: ['Dişi', 'Erkek'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                          onChanged: (val) => setModalState(() => seciliCinsiyet = val!),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: seciliDurum,
+                          decoration: const InputDecoration(labelText: 'Durum', border: OutlineInputBorder()),
+                          items: ['Sağmal', 'Gebe', 'Kuru', 'Besi', 'Buzağı'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                          onChanged: (val) => setModalState(() => seciliDurum = val!),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1B5E20)),
+                      onPressed: () {
+                        if (kupeController.text.isNotEmpty) {
+                          _yeniHayvanEkle(
+                            Hayvan(
+                              kupeNo: kupeController.text,
+                              irk: irkController.text.isEmpty ? 'Yerli / Melez' : irkController.text,
+                              cinsiyet: seciliCinsiyet,
+                              dogumTarihi: DateTime.now(),
+                              durum: seciliDurum,
+                            ),
+                          );
+                          Navigator.pop(context);
+                        }
+                      },
+                      child: const Text('Kaydet', style: TextStyle(color: Colors.white, fontSize: 16)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
-}
-
-// ============================================================
-// ÇİZGİ HAYVANLAR
-// ============================================================
-
-enum CharacterType { cow, sheep, goat }
-
-class FarmCharacter extends StatelessWidget {
-  final CharacterType type;
-  final double size;
-
-  const FarmCharacter({super.key, required this.type, required this.size});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CustomPaint(
-        painter: _AnimalPainter(type),
-      ),
-    );
-  }
-}
-
-class _AnimalPainter extends CustomPainter {
-  final CharacterType type;
-
-  _AnimalPainter(this.type);
-
-  @override
-  void paint(Canvas canvas, Size s) {
-    final p = Paint()..style = PaintingStyle.fill;
-
-    final outline = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = s.width * .035
-      ..color = const Color(0xFF4E342E);
-
-    final c = Offset(s.width * .5, s.height * .5);
-
-    final body = Rect.fromCenter(
-      center: Offset(c.dx, c.dy + s.height * .08),
-      width: s.width * .62,
-      height: s.height * .40,
-    );
-
-    p.color = type == CharacterType.cow
-        ? Colors.white
-        : type == CharacterType.sheep
-            ? const Color(0xFFF3F0E8)
-            : const Color(0xFFE8D1B0);
-
-    canvas.drawOval(body, p);
-    canvas.drawOval(body, outline);
-
-    p.color = type == CharacterType.cow
-        ? const Color(0xFF795548)
-        : type == CharacterType.sheep
-            ? const Color(0xFFE0D9CC)
-            : const Color(0xFF8D6E63);
-
-    final head = Offset(c.dx, c.dy - s.height * .16);
-    canvas.drawCircle(head, s.width * .25, p);
-    canvas.drawCircle(head, s.width * .25, outline);
-
-    if (type == CharacterType.cow) {
-      p.color = Colors.white;
-      canvas.drawOval(
-        Rect.fromCenter(
-          center: Offset(head.dx, head.dy + s.height * .06),
-          width: s.width * .24,
-          height: s.height * .13,
-        ),
-        p,
-      );
-
-      p.color = const Color(0xFF795548);
-      canvas.drawCircle(
-        Offset(head.dx - s.width * .10, head.dy - s.height * .08),
-        s.width * .055,
-        p,
-      );
-      canvas.drawCircle(
-        Offset(head.dx + s.width * .10, head.dy - s.height * .08),
-        s.width * .055,
-        p,
-      );
-    }
-
-    // Bacak detayları
-    p.color = const Color(0xFF4E342E);
-    final legWidth = s.width * .08;
-    final legHeight = s.height * .25;
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(body.left + s.width * .08, body.bottom - s.height * .05, legWidth, legHeight),
-        const Radius.circular(4),
-      ),
-      p,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(body.right - s.width * .16, body.bottom - s.height * .05, legWidth, legHeight),
-        const Radius.circular(4),
-      ),
-      p,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
